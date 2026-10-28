@@ -381,7 +381,7 @@ def control_loop():
                                 ec="#9e9e9e", lw=1.2, ls=(0, (4, 3))))
     ax.text(4.1, 3.95, "obs = sim.step(target): 20 ms of simulated time", ha="left", va="top", fontsize=12, weight="bold",
             family="monospace", color=INK)
-    box(4.3, 1.3, 2.4, 2.0, "latency", "the target reaches\nthe servos 20 ms\nafter it is sent", "#fff4e5",
+    box(4.3, 1.3, 2.4, 2.0, "latency", "the target reaches\nthe servos 10 ms\nafter it is sent", "#fff4e5",
         "#e8a33b")
     box(7.2, 1.3, 2.4, 2.0, "19 servos", "firmware P gain kp_fw\nmotor model (BAM):\ntorque, current, friction",
         "#fde9e1", HOLD_RGB)
@@ -392,8 +392,8 @@ def control_loop():
     link((9.6, 2.3), (10.1, 2.3))
     ax.add_patch(FancyArrowPatch((11.3, 1.3), (1.6, 1.3), arrowstyle="-|>", mutation_scale=18, lw=1.8, color=BLUE,
                                  connectionstyle="arc3,rad=-0.25"))
-    ax.text(6.5, 0.12, "observation: what the real robot measures\nq, dq (joints) · gyro, accel, gravity, quat (IMU)"
-            " · current (motors) · time", ha="center", va="center", fontsize=10, color=BLUE,
+    ax.text(6.5, 0.12, "observation: what the real robot measures, with its delays\nq, dq (joints) · gyro, accel, "
+            "gravity, quat (IMU) · current (motors) · time", ha="center", va="center", fontsize=10, color=BLUE,
             bbox=dict(boxstyle="round,pad=0.3", fc="white", ec=BLUE, lw=1))
 
     # timing, in simulated time: what your code sends, what the servos follow, the physics steps
@@ -411,14 +411,16 @@ def control_loop():
         t.add_patch(Rectangle((x0 + 0.3, 1.9), 19.4, 0.7, fc="#e8f0fb", ec=BLUE, lw=1))
         t.text(x0 + 10, 2.25, f"step(target {name})", ha="center", va="center", fontsize=9, family="monospace",
                color=INK)
-        prev = ["k - 1", "k", "k + 1"][k]
-        t.add_patch(Rectangle((x0 + 0.3, 0.9), 19.4, 0.7, fc="#fde9e1", ec=HOLD_RGB, lw=1))
-        t.text(x0 + 10, 1.25, f"target {prev}", ha="center", va="center", fontsize=9, color=INK)
+        prev = ["k - 1", "k", "k + 1"][k]                  # the first 10 ms: the last target, then this one
+        t.add_patch(Rectangle((x0 + 0.3, 0.9), 9.4, 0.7, fc="#fde9e1", ec=HOLD_RGB, lw=1))
+        t.text(x0 + 5, 1.25, f"target {prev}", ha="center", va="center", fontsize=8, color=INK)
+        t.add_patch(Rectangle((x0 + 10.3, 0.9), 9.4, 0.7, fc="#fde9e1", ec=HOLD_RGB, lw=1))
+        t.text(x0 + 15, 1.25, f"target {name}", ha="center", va="center", fontsize=8, color=INK)
         for i in range(10):
             t.add_patch(Rectangle((x0 + 2 * i + 0.15, -0.1), 1.7, 0.7, fc="#e9f5ec", ec="#2ca02c", lw=0.8))
-    t.annotate("", (20.3, 1.6), (0.3, 1.9), arrowprops=dict(arrowstyle="-|>", color="#e8a33b", lw=1.8,
+    t.annotate("", (10.3, 1.6), (0.3, 1.9), arrowprops=dict(arrowstyle="-|>", color="#e8a33b", lw=1.8,
                                                            mutation_scale=14))
-    t.text(9, 1.75, "20 ms latency", ha="center", va="center", fontsize=8, color="#b26b00",
+    t.text(5, 1.75, "10 ms latency", ha="center", va="center", fontsize=8, color="#b26b00",
            bbox=dict(boxstyle="round,pad=0.1", fc="white", ec="none"))
     t.annotate("one physics step: 2 ms", (1.0, -0.1), (1.0, -0.75), ha="left", va="top", fontsize=9, color=INK,
                arrowprops=dict(arrowstyle="-", color=INK, lw=0.8))
