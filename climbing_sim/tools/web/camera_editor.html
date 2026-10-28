@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>climbing-sim &mdash; camera editor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='1' y='1' width='62' height='62' rx='15' fill='%231d2a3a'/%3E%3Crect x='9' y='22' width='46' height='20' rx='6' fill='%23d6dde8'/%3E%3Ccircle cx='21' cy='32' r='6' fill='%234da3ff'/%3E%3Ccircle cx='43' cy='32' r='6' fill='%234da3ff'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#14171c; --panel:#1c2027; --panel2:#22272f; --line:#2e3540;
+    --ink:#e6e9ee; --dim:#98a2b3; --acc:#4da3ff; --ok:#3ddc84; --bad:#ff5d5d;
+    --warn:#ffb454; --hold:#e0642a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;padding:10px 22px;
+         background:linear-gradient(90deg,#1a2230 0%,#161b23 55%,#1b1a22 100%);
+         border-bottom:1px solid var(--line);box-shadow:0 2px 14px rgba(0,0,0,.35)}
+  header::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;
+         background:linear-gradient(90deg,var(--acc),var(--hold) 60%,transparent)}
+  .logo{width:44px;height:44px;flex:0 0 auto;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))}
+  .brand .name{font-size:21px;font-weight:750;letter-spacing:.2px;display:flex;align-items:center;gap:10px}
+  .brand .tag{color:var(--dim);font-size:13px;margin-top:1px}
+  .pill{font-size:12px;font-weight:650;letter-spacing:.6px;text-transform:uppercase;color:#0b1220;
+        background:linear-gradient(90deg,var(--acc),#7cc0ff);padding:3px 9px;border-radius:999px}
+  .spacer{flex:1}
+  .file{max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+        font:13px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);background:var(--panel2);
+        border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .conn{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--dim)}
+  .conn .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(61,220,132,.18)}
+  .conn.off .dot{background:var(--bad);box-shadow:0 0 0 3px rgba(255,93,93,.2)}
+  .down{display:none;padding:9px 22px;background:#3a1417;border-bottom:1px solid #7a252c;color:#ffd0d0;font-size:13px}
+  .down code{background:rgba(0,0,0,.35);padding:1px 5px;border-radius:4px;font:12.5px ui-monospace,monospace}
+
+  main{display:flex;gap:18px;padding:16px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+  .stage{display:flex;flex-direction:column;gap:14px;flex:1 1 640px;max-width:980px;min-width:0}
+  aside{flex:0 1 520px;min-width:380px;display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px}
+  .card h2{margin:0 0 12px;font-size:14px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);font-weight:650;
+           display:flex;align-items:center}
+  .card h2 .muted{text-transform:none;letter-spacing:0;font-weight:500;margin-left:7px;color:var(--dim)}
+  .step{display:inline-grid;place-items:center;width:21px;height:21px;margin-right:8px;border-radius:50%;
+        background:var(--acc);color:#0b0d10;font-size:12.5px;font-weight:750;letter-spacing:0}
+  button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;
+         padding:8px 14px;font:inherit;cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acc);color:#fff}
+  button:disabled{opacity:.45;cursor:default}
+  button.primary{background:var(--acc);border-color:var(--acc);color:#08121e;font-weight:650}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .hint{color:var(--dim);font-size:13.5px;margin-top:9px}
+  input[type=number],input[type=text],select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+       border-radius:8px;padding:7px 9px;font:inherit;width:100%;min-width:0}
+  input[type=number]{-moz-appearance:textfield;appearance:textfield;font-variant-numeric:tabular-nums}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  input:focus,select:focus{outline:none;border-color:var(--acc)}
+  .grid3{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:8px 8px;align-items:center}
+  .grid3 .lab{color:var(--dim);font-size:13.5px;white-space:nowrap;padding-right:4px}
+  .grid3 .axis{color:var(--dim);font-size:12px;text-align:center}
+  .grid2{display:grid;grid-template-columns:repeat(3,auto 1fr);gap:8px 10px;align-items:center}
+  .grid2 .lab{color:var(--dim);font-size:13.5px;white-space:nowrap}
+
+  .viewcard{padding:12px}
+  .view{position:relative;border-radius:8px;overflow:hidden;background:#0f1216;border:1px solid var(--line)}
+  .view img{display:block;width:100%;height:auto}
+  .view img.under{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
+  .view img.sim{position:relative}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{border:0;border-radius:0;padding:6px 12px;background:var(--panel2)}
+  .seg button.on{background:var(--acc);color:#08121e;font-weight:650}
+  .tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 4px 10px}
+  .tools label{display:inline-flex;align-items:center;gap:6px;color:var(--dim);font-size:13.5px}
+  input[type=range]{accent-color:var(--acc);width:120px}
+  .warnline{color:var(--warn);font-size:13px}
+  .view svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .view .busy{position:absolute;top:10px;right:12px;font-size:12.5px;color:var(--dim);background:rgba(15,18,22,.8);
+              padding:3px 9px;border-radius:999px;display:none}
+  .viewbar{display:flex;align-items:center;gap:12px;margin:2px 4px 10px;flex-wrap:wrap}
+  .viewbar .title{font-weight:650;font-size:16px}
+  .viewbar .sub{color:var(--dim);font-size:13px}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:999px;
+         border:1px solid}
+  .badge.ok{color:var(--ok);border-color:rgba(61,220,132,.35);background:rgba(61,220,132,.1)}
+  .badge.bad{color:var(--bad);border-color:rgba(255,93,93,.35);background:rgba(255,93,93,.1)}
+  .plans{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .plan{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .plan h3{margin:0 0 6px;font-size:12.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);font-weight:650}
+  .plan svg{width:100%;height:230px;display:block}
+
+  .cams{display:flex;flex-direction:column;gap:8px}
+  .cam{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
+       border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+  .cam.sel{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+  .cam .sw{width:12px;height:12px;border-radius:50%}
+  .cam .nm{font-weight:600}
+  .cam .meta{color:var(--dim);font-size:12.5px}
+  .marks{display:flex;gap:4px}
+  .mk{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:11.5px;font-weight:700}
+  .mk.ok{background:rgba(61,220,132,.16);color:var(--ok)}
+  .mk.bad{background:rgba(255,93,93,.16);color:var(--bad)}
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--panel2);font-size:14px;
+         border:1px solid var(--line);border-radius:8px;padding:8px 14px;box-shadow:0 6px 24px rgba(0,0,0,.4);
+         opacity:0;transition:opacity .2s;pointer-events:none}
+  #toast.show{opacity:1}
+  code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace}
+  @media (max-width:1100px){ aside{flex:1 1 100%} .plans{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+    <defs>
+      <linearGradient id="lgBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22324a"/><stop offset="1" stop-color="#161b23"/></linearGradient>
+      <linearGradient id="lgBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9eef5"/><stop offset="1" stop-color="#aab4c3"/></linearGradient>
+      <radialGradient id="lgLens" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#bfe0ff"/><stop offset=".45" stop-color="#4da3ff"/><stop offset="1" stop-color="#1f5fae"/></radialGradient>
+    </defs>
+    <rect x="1" y="1" width="62" height="62" rx="15" fill="url(#lgBg)" stroke="#34507a" stroke-width="1.5"/>
+    <path d="M32 46 L14 58 M32 46 L50 58" stroke="#e0642a" stroke-width="2.5" stroke-linecap="round" opacity=".85"/>
+    <rect x="8" y="21" width="48" height="22" rx="7" fill="url(#lgBody)"/>
+    <circle cx="20" cy="32" r="6.5" fill="#1c2633"/><circle cx="20" cy="32" r="4.6" fill="url(#lgLens)"/>
+    <circle cx="44" cy="32" r="6.5" fill="#1c2633"/><circle cx="44" cy="32" r="4.6" fill="url(#lgLens)"/>
+    <circle cx="32" cy="32" r="2.3" fill="#e0642a"/>
+  </svg>
+  <div class="brand">
+    <div class="name">climbing-sim <span class="pill">Camera editor</span></div>
+    <div class="tag">Check your cameras' calibration on real photos &middot; export it to the simulator</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="file" id="meta" title="The JSON file Save writes">loading&hellip;</div>
+  <div class="conn" id="conn"><span class="dot"></span><span id="connTxt">connected</span></div>
+</header>
+<div class="down" id="down"><b>The editor's server is not responding.</b> Restart it with
+  <code>uv run climbing-sim-cameras</code>; your settings are still on this page.</div>
+
+<main>
+  <div class="stage">
+    <div class="card viewcard">
+      <div class="viewbar">
+        <span class="title" id="vTitle">&hellip;</span>
+        <span class="sub" id="vSub"></span>
+        <span class="spacer"></span>
+        <span class="badge" id="vBadge"></span>
+      </div>
+      <div class="tools">
+        <div class="seg" id="mode2">
+          <button data-m="sim" class="on">Simulation</button><button data-m="photo">Real photo</button><button data-m="both">Both</button>
+        </div>
+        <label id="blendL" style="display:none">simulation <input type="range" id="blend" min="0" max="100" value="45"></label>
+        <label><input type="checkbox" id="outl" checked> board &amp; markers from your parameters</label>
+        <span class="spacer"></span>
+        <button id="loadPhoto">Load a photo&hellip;</button>
+        <input type="file" id="photoFile" accept="image/*" style="display:none">
+      </div>
+      <div class="view" id="view">
+        <img id="photo" class="under" alt="" style="display:none">
+        <img id="img" class="sim" alt="camera view">
+        <svg id="overlay" preserveAspectRatio="none"></svg>
+        <span class="busy" id="busy">rendering&hellip;</span>
+      </div>
+      <div class="hint" id="viewHint"></div>
+      <div class="hint">How to use it: your own code detects the corner markers in a real camera's image and computes
+        that camera's pose (rvec, tvec); enter it (step 3), load a photo taken by the same camera at the same
+        resolution: the outline drawn from your parameters must fall on the real board and markers. Then save the
+        cameras for the simulator.</div>
+    </div>
+    <div class="plans">
+      <div class="plan"><h3>Seen from above</h3><svg id="top" preserveAspectRatio="xMidYMid meet"></svg></div>
+      <div class="plan"><h3>Seen from the side</h3><svg id="side" preserveAspectRatio="xMidYMid meet"></svg></div>
+    </div>
+  </div>
+
+  <aside>
+    <div class="card">
+      <h2><span class="step">1</span>Cameras <span class="muted">click one to edit it</span></h2>
+      <div class="cams" id="cams"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="add">Add</button>
+        <button id="dup">Duplicate</button>
+        <button id="del">Remove</button>
+        <span class="spacer"></span>
+        <label style="flex:1;max-width:200px"><input type="text" id="name" title="Camera name: render it with sim.render(name)"></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">2</span>Rough placement <span class="muted">before you have a calibration</span></h2>
+      <div class="grid3">
+        <span></span><span class="axis">x (right)</span><span class="axis">y (up)</span><span class="axis">z (from the wall)</span>
+        <span class="lab">camera at</span><input type="number" step="0.01" id="p0"><input type="number" step="0.01" id="p1"><input type="number" step="0.01" id="p2">
+        <span class="lab">looks at</span><input type="number" step="0.01" id="t0"><input type="number" step="0.01" id="t1"><input type="number" step="0.01" id="t2">
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button id="place" class="primary">Place the camera</button>
+        <span class="hint" style="margin:0">wall frame, metres; origin: the wall's bottom-left corner</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">3</span>Calibration <span class="muted">yours: intrinsics, and the pose your code found</span></h2>
+      <div class="row" style="margin-bottom:10px">
+        <span class="hint" style="margin:0">RealSense D435i colour mode</span>
+        <select id="mode" style="width:auto;flex:1"></select>
+      </div>
+      <div class="grid2">
+        <span class="lab">width</span><input type="number" id="width">
+        <span class="lab">fx</span><input type="number" step="0.01" id="fx">
+        <span class="lab">cx</span><input type="number" step="0.01" id="cx">
+        <span class="lab">height</span><input type="number" id="height">
+        <span class="lab">fy</span><input type="number" step="0.01" id="fy">
+        <span class="lab">cy</span><input type="number" step="0.01" id="cy">
+      </div>
+      <h2 style="margin-top:14px">Extrinsics <span class="muted">OpenCV, wall &rarr; camera</span></h2>
+      <div class="grid3">
+        <span class="lab">rvec (rad)</span><input type="number" step="0.0001" id="r0"><input type="number" step="0.0001" id="r1"><input type="number" step="0.0001" id="r2">
+        <span class="lab">tvec (m)</span><input type="number" step="0.0001" id="v0"><input type="number" step="0.0001" id="v1"><input type="number" step="0.0001" id="v2">
+      </div>
+      <div class="hint">OpenCV convention, wall &rarr; camera: P<sub>cam</sub> = R(rvec) P<sub>wall</sub> + tvec (wall frame: x right, y up, z out of the wall, metres).</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">4</span>Save <span class="muted">the JSON the simulator loads</span></h2>
+      <div class="row">
+        <button id="save" class="primary">Save</button>
+        <button id="download">Download</button>
+        <button id="open">Open&hellip;</button>
+        <button id="defaults" title="The two default D435i cameras">Defaults</button>
+        <input type="file" id="file" accept=".json,application/json" style="display:none">
+      </div>
+      <div class="hint" id="savedTo">In Python: <code>ClimbingSim(cameras="cameras.json")</code></div>
+    </div>
+  </aside>
+</main>
+<div id="toast"></div>
+
+<script>
+// The page keeps the cameras (cams) and draws everything; the server (tools/camera_editor.py) renders the
+// simulated images and projects the board and the marker plates with each camera's parameters.
+const $=id=>document.getElementById(id);
+const COLORS=['#4da3ff','#ffb454','#3ddc84','#c48bff','#ff7a90','#5ee0e0'];
+// CFG: /api/config; cams: the cameras (+ _photo, _photoSize: the real photo loaded for it, never sent);
+// sel: the camera shown; info[i]: what the server computed for camera i (marker check, plates, board, pose)
+let CFG=null, cams=[], sel=0, info={}, file=null, timer=null, busyN=0;
+
+// GET (no body) or POST JSON to the server; shows when it is stopped
+async function api(path, body){
+  let r;
+  try{
+    r = await fetch(path, body===undefined ? {cache:'no-store'}
+                   : {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    $('down').style.display='none'; $('conn').classList.remove('off'); $('connTxt').textContent='connected';
+  }catch(e){ $('down').style.display='block'; $('conn').classList.add('off'); $('connTxt').textContent='server stopped'; throw e; }
+  const j = await r.json().catch(()=>({error:'HTTP '+r.status}));
+  if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
+  return j;
+}
+// a short message at the bottom of the page
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('show'),2600); }
+// the file Save writes, in the header
+function showFile(p){ if(!p){ $('meta').textContent='not saved yet'; return; } const s=p.split(/[\\/]/); $('meta').textContent=s.slice(-2).join('/'); $('meta').title=p; }
+const f=(v,n)=>(+v).toFixed(n);
+
+// ---- the selected camera's fields ------------------------------------------------------------------------
+const INTR=['width','height','fx','fy','cx','cy'];
+// a camera as the server and the files know it (without the photo)
+const clean=c=>({name:c.name,width:c.width,height:c.height,fx:c.fx,fy:c.fy,cx:c.cx,cy:c.cy,rvec:c.rvec,tvec:c.tvec});
+// camera -> form fields
+function fill(){
+  const c=cams[sel]; if(!c) return;
+  $('name').value=c.name;
+  for(const k of INTR) $(k).value = (k==='width'||k==='height') ? c[k] : f(c[k],2);
+  for(let i=0;i<3;i++){ $('r'+i).value=f(c.rvec[i],5); $('v'+i).value=f(c.tvec[i],5); }
+  const inf=info[sel];
+  if(inf){
+    for(let i=0;i<3;i++) $('p'+i).value=f(inf.position[i],3);
+    const t=inf.look_at||[inf.position[0]+inf.axis[0],inf.position[1]+inf.axis[1],0];
+    for(let i=0;i<3;i++) $('t'+i).value=f(t[i],3);
+  }
+  const m=CFG.d435i.modes.find(m=>m.width===c.width&&m.height===c.height);
+  $('mode').value = m ? `${m.width}x${m.height}` : '';
+}
+// form fields -> camera
+function readFields(){
+  const c=cams[sel];
+  c.name=$('name').value.trim()||c.name;
+  for(const k of INTR){ const v=parseFloat($(k).value); if(isFinite(v)) c[k]=(k==='width'||k==='height')?Math.round(v):v; }
+  for(let i=0;i<3;i++){ const r=parseFloat($('r'+i).value), t=parseFloat($('v'+i).value);
+    if(isFinite(r)) c.rvec[i]=r; if(isFinite(t)) c.tvec[i]=t; }
+}
+function changed(){ readFields(); schedule(); }
+
+// ---- preview -----------------------------------------------------------------------------------------------
+// refresh 250 ms after the last keystroke
+function schedule(){ clearTimeout(timer); timer=setTimeout(refresh,250); }
+// the selected camera's image and drawings, then the marker check of the others
+async function refresh(){
+  const c=cams[sel]; if(!c) return;
+  $('busy').style.display='block'; const n=++busyN;
+  try{
+    const r=await api('/api/preview',{camera:clean(c)});
+    if(n!==busyN) return;                 // a newer request is on its way
+    info[sel]=r; $('img').src=r.image; drawOverlay(); fill();
+  }catch(e){ toast('preview failed: '+e.message); }
+  finally{ if(n===busyN) $('busy').style.display='none'; }
+  // the others: only their marker check
+  await Promise.all(cams.map(async (cc,i)=>{ if(i!==sel) try{ info[i]=await api('/api/describe',{camera:clean(cc)}); }catch(_){} }));
+  renderList(); drawPlans();
+}
+let viewMode='sim';              // 'sim', 'photo' or 'both'
+// the board and the marker plates over the image, the marker badge
+function drawOverlay(){
+  const c=cams[sel], inf=info[sel], svg=$('overlay'); if(!inf) return;
+  svg.setAttribute('viewBox',`0 0 ${c.width} ${c.height}`);
+  const sw=Math.max(2,c.width/320), real=viewMode!=='sim';
+  let out='';
+  if($('outl').checked){
+    for(const e of inf.board){            // the board's edges, broken where they go behind the camera
+      let seg=[];
+      const flush=()=>{ if(seg.length>1) out+=`<polyline points="${seg.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#ffb454" stroke-width="${sw}" stroke-dasharray="${real?'':`${4*sw} ${3*sw}`}"/>`; seg=[]; };
+      for(const p of e){ if(p) seg.push(p); else flush(); } flush();
+    }
+    for(const [id,pts] of Object.entries(inf.plates)){
+      const ok=inf.visible[id], col= real ? '#5ee0e0' : (ok?'#3ddc84':'#ff5d5d');
+      const cx=pts.reduce((a,p)=>a+p[0],0)/4, cy=pts.reduce((a,p)=>a+p[1],0)/4;
+      out+=`<polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="${real?'none':(ok?'rgba(61,220,132,.12)':'rgba(255,93,93,.12)')}" stroke="${col}" stroke-width="${sw}"/>`+
+           `<text x="${cx}" y="${cy}" fill="${col}" font-size="${c.width/40}" font-weight="700" text-anchor="middle" dominant-baseline="middle" font-family="ui-sans-serif,system-ui">${id}</text>`;
+    }
+  }
+  svg.innerHTML=out;
+  const nOk=Object.values(inf.visible).filter(Boolean).length;
+  $('vTitle').textContent=c.name;
+  $('vSub').textContent=`${c.width} × ${c.height} · camera at (${inf.position.map(v=>f(v,2)).join(', ')}) m`;
+  const b=$('vBadge'); b.className='badge '+(nOk===4?'ok':'bad');
+  b.textContent= nOk===4 ? '✓ the four markers are in the frame' : `✕ not in the frame: marker ${Object.entries(inf.visible).filter(([,v])=>!v).map(([k])=>k).join(', ')}`;
+  applyMode();
+}
+// show the simulated image, the photo or both, and the matching hint
+function applyMode(){
+  const c=cams[sel], ph=c && c._photo;
+  if(viewMode!=='sim' && !ph){ viewMode='sim'; setSeg(); toast('load a photo from this camera first'); }
+  $('photo').style.display = viewMode==='sim' ? 'none' : 'block';
+  if(ph) $('photo').src=ph;
+  $('img').style.opacity = viewMode==='sim' ? 1 : viewMode==='photo' ? 0 : $('blend').value/100;
+  $('blendL').style.display = viewMode==='both' ? '' : 'none';
+  let h = viewMode==='sim'
+    ? 'The simulated colour image (no lens distortion), the robot on wall N2. Dashed orange: the board; markers in green when their whole plate is in the frame, red when not.'
+    : 'The real photo, with the board (orange) and the marker plates (cyan) drawn from your intrinsics and extrinsics.';
+  if(ph && c._photoSize && (c._photoSize[0]!==c.width || c._photoSize[1]!==c.height))
+    h += ` <span class="warnline">The photo is ${c._photoSize[0]} × ${c._photoSize[1]} px, the camera ${c.width} × ${c.height}: use the same resolution.</span>`;
+  $('viewHint').innerHTML=h;
+}
+function setSeg(){ for(const b of $('mode2').querySelectorAll('button')) b.classList.toggle('on', b.dataset.m===viewMode); }
+// the camera list, with each camera's marker check
+function renderList(){
+  const box=$('cams'); box.innerHTML='';
+  cams.forEach((c,i)=>{
+    const inf=info[i], el=document.createElement('div');
+    el.className='cam'+(i===sel?' sel':'');
+    const marks = inf ? Object.entries(inf.visible).map(([k,v])=>`<span class="mk ${v?'ok':'bad'}" title="marker ${k}">${k}</span>`).join('') : '';
+    el.innerHTML=`<span class="sw" style="background:${COLORS[i%COLORS.length]}"></span>`+
+      `<div><div class="nm">${c.name}</div><div class="meta">${c.width} × ${c.height}`+
+      (inf?` · ${f(inf.position[2],2)} m from the wall`:'')+`</div></div>`+
+      `<div class="marks">${marks}</div>`;
+    el.onclick=()=>{ if(i===sel) return; readFields(); sel=i; fill(); renderList(); refresh(); };
+    box.appendChild(el);
+  });
+  $('del').disabled=cams.length<=1;
+}
+
+// ---- plans: the wall and the cameras seen from above and from the side ---------------------------------------
+// field-of-view triangle from (px,py) along (ax,ay), half-angle half, length len (SVG points)
+function wedge(px,py,ax,ay,half,len){
+  const a=Math.atan2(ay,ax), p1=[px+len*Math.cos(a-half),py+len*Math.sin(a-half)], p2=[px+len*Math.cos(a+half),py+len*Math.sin(a+half)];
+  return `${px},${py} ${p1.join(',')} ${p2.join(',')}`;
+}
+// the top and side views of the wall and the cameras (from info[i].position / axis)
+function drawPlans(){
+  const W=CFG.wall.width, H=CFG.wall.height, hf=CFG.d435i.hfov*Math.PI/360, vf=CFG.d435i.vfov*Math.PI/360;
+  // top view: the wall on the left (x downwards), the distance from the wall to the right, as the side view
+  const zm=Math.max(1.5,...cams.map((_,i)=>info[i]?info[i].position[2]+0.25:0));
+  const xs=cams.map((_,i)=>info[i]?info[i].position[0]:W/2);
+  const xa=Math.min(-0.15,...xs)-0.25, xb=Math.max(W+0.15,...xs)+0.25;
+  const tw=300, sc=tw/(zm+0.35), th=(xb-xa)*sc+16;
+  const T=(x,z)=>[30+z*sc, 8+(x-xa)*sc];
+  let s=`<rect x="0" y="0" width="${tw}" height="${th}" fill="#0f1216" rx="6"/>`;
+  for(let z=0.5;z<=zm;z+=0.5){ const [x]=T(0,z); s+=`<line x1="${x}" x2="${x}" y1="0" y2="${th}" stroke="#202833"/><text x="${x+2}" y="${th-4}" fill="#6b7685" font-size="9" font-family="ui-monospace,monospace">${z} m</text>`; }
+  const [wx,wy0]=T(0,0), [,wy1]=T(W,0);
+  s+=`<rect x="${wx-6}" y="${wy0}" width="6" height="${wy1-wy0}" fill="#d9b98a" rx="1.5"/>`;
+  cams.forEach((c,i)=>{ const inf=info[i]; if(!inf) return; const col=COLORS[i%COLORS.length];
+    const [px,py]=T(inf.position[0],inf.position[2]);
+    s+=`<polygon points="${wedge(px,py,inf.axis[2]*sc,inf.axis[0]*sc,hf,inf.position[2]*sc/Math.cos(hf))}" fill="${col}" opacity="${i===sel?.16:.07}" stroke="${col}" stroke-opacity=".5"/>`;
+    s+=`<circle cx="${px}" cy="${py}" r="${i===sel?4.5:3.5}" fill="${col}" stroke="#0f1216" stroke-width="1.5"/><text x="${px+7}" y="${py+3}" fill="${col}" font-size="10" font-weight="600" font-family="ui-sans-serif,system-ui">${c.name}</text>`;
+  });
+  $('top').setAttribute('viewBox',`0 0 ${tw} ${th}`); $('top').innerHTML=s;
+  // side view: distance from the wall to the right, height up
+  const sw=300, sx=sw/(zm+0.6), sh=(H+0.4)*sx;
+  const S=(z,y)=>[30+z*sx, sh-10-y*sx];
+  let t=`<rect x="0" y="0" width="${sw}" height="${sh}" fill="#0f1216" rx="6"/>`;
+  const [fx0,fy0]=S(0,0), [fx1]=S(zm+0.4,0);
+  t+=`<line x1="${fx0-20}" x2="${fx1}" y1="${fy0}" y2="${fy0}" stroke="#3a4350" stroke-width="2"/>`;
+  const [gx,gy1]=S(0,H);
+  t+=`<rect x="${gx-6}" y="${gy1}" width="6" height="${fy0-gy1}" fill="#d9b98a" rx="1.5"/>`;
+  cams.forEach((c,i)=>{ const inf=info[i]; if(!inf) return; const col=COLORS[i%COLORS.length];
+    const [px,py]=S(inf.position[2],inf.position[1]); const az=inf.axis[2], ay=inf.axis[1];
+    t+=`<polygon points="${wedge(px,py,az*sx,-ay*sx,vf,inf.position[2]*sx/Math.cos(vf))}" fill="${col}" opacity="${i===sel?.16:.07}" stroke="${col}" stroke-opacity=".5"/>`;
+    t+=`<circle cx="${px}" cy="${py}" r="${i===sel?4.5:3.5}" fill="${col}" stroke="#0f1216" stroke-width="1.5"/>`;
+  });
+  $('side').setAttribute('viewBox',`0 0 ${sw} ${sh}`); $('side').innerHTML=t;
+}
+
+// ---- actions ---------------------------------------------------------------------------------------------------
+// "Rough placement": the server turns a position and a target into rvec, tvec
+async function place(){
+  readFields();
+  const p=[0,1,2].map(i=>parseFloat($('p'+i).value)), t=[0,1,2].map(i=>parseFloat($('t'+i).value));
+  if([...p,...t].some(v=>!isFinite(v))) return toast('enter the six coordinates');
+  try{ const r=await api('/api/look_at',{camera:clean(cams[sel]),position:p,target:t}); cams[sel].rvec=r.rvec; cams[sel].tvec=r.tvec; fill(); refresh(); }
+  catch(e){ toast(e.message); }
+}
+$('place').onclick=place;
+for(const b of $('mode2').querySelectorAll('button')) b.onclick=()=>{ viewMode=b.dataset.m; setSeg(); drawOverlay(); };
+$('blend').oninput=applyMode; $('outl').onchange=drawOverlay;
+$('loadPhoto').onclick=()=>$('photoFile').click();
+$('photoFile').onchange=e=>{
+  const fl=e.target.files[0]; if(!fl) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ const im=new Image(); im.onload=()=>{ const c=cams[sel]; c._photo=rd.result; c._photoSize=[im.naturalWidth,im.naturalHeight];
+                    viewMode='both'; setSeg(); drawOverlay(); toast('photo loaded for '+c.name+' (it stays in this page, it is not saved)'); };
+                  im.src=rd.result; };
+  rd.readAsDataURL(fl); e.target.value='';
+};
+for(const id of ['p0','p1','p2','t0','t1','t2']) $(id).addEventListener('keydown',e=>{ if(e.key==='Enter') place(); });
+for(const id of [...INTR,'r0','r1','r2','v0','v1','v2']) $(id).addEventListener('input',changed);
+$('name').addEventListener('input',()=>{ readFields(); renderList(); $('vTitle').textContent=cams[sel].name; });
+$('mode').onchange=()=>{
+  const m=CFG.d435i.modes.find(m=>`${m.width}x${m.height}`===$('mode').value); if(!m) return;
+  Object.assign(cams[sel],{width:m.width,height:m.height,fx:m.fx,fy:m.fy,cx:m.cx,cy:m.cy}); fill(); refresh();
+};
+$('add').onclick=()=>{
+  const m=CFG.d435i.modes.find(m=>m.width===1280&&m.height===720);
+  const c={name:`cam${cams.length}`,width:m.width,height:m.height,fx:m.fx,fy:m.fy,cx:m.cx,cy:m.cy,rvec:[...cams[sel].rvec],tvec:[...cams[sel].tvec]};
+  cams.push(c); sel=cams.length-1; fill(); refresh();
+};
+$('dup').onclick=()=>{ readFields(); const c=JSON.parse(JSON.stringify(clean(cams[sel]))); c.name+='_copy'; cams.push(c); sel=cams.length-1; info[sel]=info[sel-1]; fill(); refresh(); };
+$('del').onclick=()=>{ if(cams.length<=1) return; cams.splice(sel,1); sel=Math.max(0,sel-1); refreshAll(); };
+// forget the computed info and redraw everything
+async function refreshAll(){ info={}; fill(); await refresh(); }
+$('save').onclick=async()=>{
+  readFields();
+  const bad=cams.filter((_,i)=>info[i]&&Object.values(info[i].visible).some(v=>!v)).map(c=>c.name);
+  try{ const r=await api('/api/save',{cameras:cams.map(clean),path:file}); file=r.saved; showFile(file);
+       $('savedTo').innerHTML=`saved: <code>${r.saved}</code>`;
+       toast(bad.length?`saved, but ${bad.join(', ')} miss(es) a marker`:'saved'); }
+  catch(e){ toast('not saved: '+e.message); }
+};
+$('download').onclick=()=>{
+  readFields(); const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({cameras:cams.map(clean)},null,1)],{type:'application/json'}));
+  a.download='cameras.json'; a.click(); URL.revokeObjectURL(a.href);
+};
+$('open').onclick=()=>$('file').click();
+$('file').onchange=async e=>{
+  const fl=e.target.files[0]; if(!fl) return;
+  try{ const d=JSON.parse(await fl.text()); if(!Array.isArray(d.cameras)||!d.cameras.length) throw new Error('no "cameras" list');
+       cams=d.cameras; sel=0; await refreshAll(); toast('opened '+fl.name); }
+  catch(err){ toast('not a camera file: '+err.message); }
+  e.target.value='';
+};
+
+// ---- start --------------------------------------------------------------------------------------------------
+(async()=>{
+  CFG=await api('/api/config');
+  $('mode').innerHTML='<option value="">custom</option>'+CFG.d435i.modes.map(m=>`<option value="${m.width}x${m.height}">${m.width} × ${m.height}</option>`).join('');
+  file=CFG.file; showFile(file);
+  cams=(await api('/api/cameras')).cameras;
+  $('defaults').onclick=async()=>{ cams=(await api('/api/cameras?defaults=1')).cameras; sel=0; await refreshAll(); toast('two default D435i cameras'); };
+  sel=0; fill(); renderList(); await refreshAll();
+  setInterval(()=>api('/api/ping').catch(()=>{}), 5000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+ "note": "hanging posture on the four start holds (the climb start posture of the trained policy): joint angles; the trunk pose is fitted to the sockets at reset",
+ "joints": {
+  "right_shoulder_pitch": -1.23012,
+  "right_shoulder_roll": -0.102943,
+  "right_elbow": 0.280384,
+  "right_hip_yaw": -0.007212,
+  "right_hip_roll": -0.006726,
+  "right_hip_pitch": -0.087831,
+  "right_knee": -0.007865,
+  "right_ankle_pitch": 0.014226,
+  "right_ankle_roll": 0.006379,
+  "left_shoulder_pitch": -1.23012,
+  "left_shoulder_roll": 0.102945,
+  "left_elbow": 0.280382,
+  "left_hip_yaw": 0.007215,
+  "left_hip_roll": 0.006733,
+  "left_hip_pitch": -0.08783,
+  "left_knee": -0.007866,
+  "left_ankle_pitch": 0.014224,
+  "left_ankle_roll": -0.00638,
+  "head": 0.0
+ }
+}

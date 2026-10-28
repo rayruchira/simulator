@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "climbing-sim"
+version = "0.1.0"
+description = "MuJoCo simulator of the climbing robot on the hackathon wall (robot, wall, holds, ArUco markers, cameras)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mujoco>=3.11,<4",          # tested with 3.11 and 3.16
+    "numpy>=1.26",
+    "pillow>=10",
+    "better-actuator-models @ git+https://github.com/Rhoban/bam.git@e9a619d56da5236206f4de6ceec2c1ee1b497b5c",   # latest (2026-09-13)
+    "microban-model",           # the robot (Rhoban/microban_model, meshes in Git LFS), shared with microban
+]
+
+[project.scripts]
+climbing-sim-cameras = "climbing_sim.tools.camera_editor:main"
+climbing-sim-wall = "climbing_sim.tools.wall_tool:main"
+climbing-sim-wall-editor = "climbing_sim.tools.wall_editor:main"
+
+[tool.setuptools.packages.find]
+include = ["climbing_sim*"]
+
+[tool.setuptools.package-data]
+climbing_sim = ["assets/**/*", "walls/*.json", "tools/web/*.html"]
+
+[tool.uv.sources]
+microban-model = { git = "https://github.com/Rhoban/microban_model", lfs = true }

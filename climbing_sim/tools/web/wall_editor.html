@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>climbing-sim &mdash; wall editor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='1' y='1' width='62' height='62' rx='15' fill='%231d2a3a'/%3E%3Cpath d='M41.5 55.1 L46.5 51.2 L49.7 46.6 L51.1 42.6 L51.4 38.3 L55.1 21.6 L51.5 17.4 L12.5 17.4 L8.9 21.6 L12.6 38.3 L12.9 42.6 L16.3 49.8 L22.5 55.1 Z' fill='%23e0642a'/%3E%3Ccircle cx='32' cy='37' r='8.6' fill='%234da3ff'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#14171c; --panel:#1c2027; --panel2:#22272f; --line:#2e3540;
+    --ink:#e6e9ee; --dim:#98a2b3; --acc:#4da3ff; --ok:#3ddc84; --bad:#ff5d5d;
+    --warn:#ffb454; --hold:#e0642a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;padding:10px 22px;
+         background:linear-gradient(90deg,#1a2230 0%,#161b23 55%,#1b1a22 100%);
+         border-bottom:1px solid var(--line);box-shadow:0 2px 14px rgba(0,0,0,.35)}
+  header::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;
+         background:linear-gradient(90deg,var(--acc),var(--hold) 60%,transparent)}
+  .logo{width:44px;height:44px;flex:0 0 auto;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))}
+  .brand .name{font-size:21px;font-weight:750;letter-spacing:.2px;display:flex;align-items:center;gap:10px}
+  .brand .tag{color:var(--dim);font-size:13px;margin-top:1px}
+  .pill{font-size:12px;font-weight:650;letter-spacing:.6px;text-transform:uppercase;color:#0b1220;
+        background:linear-gradient(90deg,var(--acc),#7cc0ff);padding:3px 9px;border-radius:999px}
+  .spacer{flex:1}
+  .file{max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+        font:13px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);background:var(--panel2);
+        border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .conn{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--dim)}
+  .conn .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(61,220,132,.18)}
+  .conn.off .dot{background:var(--bad);box-shadow:0 0 0 3px rgba(255,93,93,.2)}
+  .down{display:none;padding:9px 16px;background:#3a1417;border-bottom:1px solid #7a252c;
+        color:#ffd0d0;font-size:12px}
+  .down code{background:rgba(0,0,0,.35);padding:1px 5px;border-radius:4px;
+             font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace}
+  main{display:flex;gap:18px;padding:16px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+         padding:12px;width:min-content}
+  canvas{display:block;border-radius:6px;cursor:crosshair;background:#0f1216}
+  aside{flex:1;min-width:380px;max-width:640px;display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px}
+  .card h2{margin:0 0 12px;font-size:14px;text-transform:uppercase;letter-spacing:.9px;
+           color:var(--dim);font-weight:650}
+  .card h2 .muted{text-transform:none;letter-spacing:0;font-weight:500;margin-left:7px;color:var(--dim)}
+  .step{display:inline-grid;place-items:center;width:21px;height:21px;margin-right:8px;
+        border-radius:50%;background:var(--acc);color:#0b0d10;font-size:12.5px;
+        font-weight:750;letter-spacing:0;vertical-align:1px}
+  button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+         border-radius:8px;padding:9px 15px;font:inherit;cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--acc);color:#fff}
+  button:disabled{opacity:.45;cursor:default}
+  button.primary{background:var(--acc);border-color:var(--acc);color:#08121e;font-weight:650}
+  button.danger{background:var(--bad);border-color:var(--bad);color:#fff;font-weight:650}
+  button.danger:hover:not(:disabled){filter:brightness(1.12);color:#fff}
+  button.on{background:var(--acc);border-color:var(--acc);color:#08121e;font-weight:650}
+  button.icon{padding:7px 9px;min-width:32px}
+  .row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .lv{flex:1;min-width:70px;text-align:center;padding:9px 4px;font-size:15px}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border-radius:8px;
+        border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-size:14.5px}
+  .chip.sel{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+  .sw{width:11px;height:11px;border-radius:50%}
+  .muted{color:var(--dim)}
+  .hint{color:var(--dim);font-size:13.5px;margin-top:9px}
+  input[type=number],input[type=text],select{background:var(--panel2);border:1px solid var(--line);
+       color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit}
+  input[type=number]{width:96px;-moz-appearance:textfield;appearance:textfield}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  input[type=text]{flex:1;min-width:120px}
+  label.ck.off{opacity:.4}
+  input:disabled{opacity:.45;cursor:not-allowed}
+  label.ck{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--dim)}
+  .verdict{font-weight:650;font-size:15px;padding:9px 12px;border-radius:8px}
+  .verdict.ok{background:rgba(61,220,132,.13);color:var(--ok);border:1px solid rgba(61,220,132,.3)}
+  .verdict.bad{background:rgba(255,93,93,.12);color:var(--bad);border:1px solid rgba(255,93,93,.3)}
+  .verdict.warn{background:rgba(255,180,84,.12);color:var(--warn);border:1px solid rgba(255,180,84,.3)}
+  .stats{display:flex;gap:20px;flex-wrap:wrap;margin-top:10px;font-size:14px;color:var(--dim)}
+  .stats b{color:var(--ink);font-size:17px;font-variant-numeric:tabular-nums}
+  .chips{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .sep{flex:0 0 8px}
+  aside{overflow:auto}
+  .cursor{padding-top:10px;font:13px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--dim)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--panel2);font-size:14px;
+         border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:12.5px;
+         box-shadow:0 6px 24px rgba(0,0,0,.4);opacity:0;transition:opacity .2s;pointer-events:none}
+  #toast.show{opacity:1}
+  kbd{font:12.5px ui-monospace,monospace;background:var(--panel2);border:1px solid var(--line);
+      border-radius:4px;padding:0 4px}
+  @media (max-width:860px){ main{flex-direction:column} aside{max-width:none;width:100%} }
+  /* ---- the Projector panel (drives climbing-projector, a separate program) ---- */
+  .projbtn{display:flex;align-items:center;gap:8px}
+  .projbtn .dot{width:9px;height:9px;border-radius:50%;background:#59616d}
+  .projbtn.run .dot{background:var(--ok);box-shadow:0 0 0 3px rgba(61,220,132,.18)}
+  .drawer{position:fixed;top:78px;right:16px;width:400px;max-height:calc(100vh - 96px);overflow:auto;z-index:6;
+          background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;
+          box-shadow:0 12px 40px rgba(0,0,0,.55);display:none}
+  .drawer.open{display:block}
+  .drawer h3{margin:14px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);
+             font-weight:650}
+  .drawer h3:first-of-type{margin-top:4px}
+  .drawer .msg{font-size:13px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);
+               border-radius:8px;padding:7px 10px;margin:8px 0;min-height:20px}
+  .drawer .close{float:right;padding:2px 9px}
+  .proposal{border:1px solid #6b4fa8;background:rgba(150,110,255,.08);border-radius:8px;padding:9px 11px;margin-top:8px}
+  .proposal b{color:#c7b2ff}
+  .chk{display:flex;align-items:center;gap:5px;font-size:14px;color:var(--dim)}
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+    <defs>
+      <linearGradient id="lgBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22324a"/><stop offset="1" stop-color="#161b23"/></linearGradient>
+      <linearGradient id="lgHold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8a4c"/><stop offset="1" stop-color="#c94f1c"/></linearGradient>
+      <radialGradient id="lgBall" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#bfe0ff"/><stop offset=".45" stop-color="#4da3ff"/><stop offset="1" stop-color="#1f5fae"/></radialGradient>
+    </defs>
+    <rect x="1" y="1" width="62" height="62" rx="15" fill="url(#lgBg)" stroke="#34507a" stroke-width="1.5"/>
+    <g fill="#3b4a5e"><circle cx="14" cy="9" r="1.3"/><circle cx="24" cy="9" r="1.3"/><circle cx="34" cy="9" r="1.3"/><circle cx="44" cy="9" r="1.3"/><circle cx="54" cy="9" r="1.3"/></g>
+    <path d="M41.5 55.1 L46.5 51.2 L49.7 46.6 L51.1 42.6 L51.4 38.3 L55.1 21.6 L51.5 17.4 L12.5 17.4 L8.9 21.6 L8.9 22.5 L12.6 38.3 L12.9 42.6 L16.3 49.8 L18.8 52.5 L22.5 55.1 Z" fill="url(#lgHold)"/>
+    <circle cx="14.8" cy="21.9" r="1.6" fill="#ffd9c6"/><circle cx="49.2" cy="21.9" r="1.6" fill="#ffd9c6"/>
+    <ellipse cx="32" cy="39" rx="10.5" ry="9.5" fill="#5a2510"/>
+    <circle cx="32" cy="37" r="8.6" fill="url(#lgBall)"/>
+  </svg>
+  <div class="brand">
+    <div class="name">climbing-sim <span class="pill">Wall editor</span></div>
+    <div class="tag">Rock Climbing Robots hackathon &middot; build a wall, save it, climb it in the simulator</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="file" id="meta" title="The JSON file Save writes">loading&hellip;</div>
+  <button class="projbtn" id="projBtn" title="Show the wall on the real board with the video projector, detect the holds bolted on it"><span class="dot"></span>Projector</button>
+  <div class="conn" id="conn" title="The editor's local server"><span class="dot"></span><span id="connTxt">connected</span></div>
+</header>
+<div class="down" id="down"><b>The editor's server is not responding.</b> Restart it with
+  <code>uv run climbing-sim-wall-editor</code>; your holds are still on this page.</div>
+
+<main>
+  <div class="stage" id="stage">
+    <canvas id="cv" width="460" height="800"></canvas>
+  </div>
+
+  <aside id="side">
+    <div class="card">
+      <h2><span class="step">1</span>Route <span class="muted">random, or your own</span></h2>
+      <div class="row" id="levels"></div>
+      <div class="row" style="margin-top:7px">
+        <label class="ck" title="The same level and seed always give the same route">seed
+          <input type="number" id="seed" value="0" min="0"></label>
+        <button class="icon" id="dice" title="Random seed">&#9858;</button>
+        <button id="gen" class="primary">Generate</button>
+        <button id="clear" title="Remove every hold">Clear</button>
+      </div>
+      <div class="row" style="margin-top:9px">
+        <label class="ck" title="The three walls of the competition (rulebook, section Climbing wall: difficulty levels 1, 2 and 3)">competition walls</label>
+        <select id="bundled"></select>
+        <button id="loadb" title="Load this competition wall">Load</button>
+      </div>
+      <div class="hint"><b>Click</b> the wall to add a hold (aim at its socket), <b>click a hold</b> to remove it,
+        <b>drag</b> to move it, <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo.</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">2</span>Start holds <span class="muted">click a limb, then its hold</span></h2>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">3</span>Save &amp; try <span class="muted">the JSON the simulator loads</span></h2>
+      <div class="row">
+        <label class="ck">name</label><input type="text" id="name" value="my_wall">
+      </div>
+      <div class="row" style="margin-top:7px">
+        <button id="save" class="primary" title="Write the JSON file on this computer">Save</button>
+        <button id="download" title="Download the JSON file from the browser">Download</button>
+        <button id="open" title="Open a wall JSON file">Open&hellip;</button>
+        <input type="file" id="file" accept=".json,application/json" style="display:none">
+        <span class="sep"></span>
+        <button id="try" title="The robot hanging on the start holds, in MuJoCo">Open in MuJoCo</button>
+      </div>
+      <div class="hint" id="savedTo">In Python: <code>ClimbingSim(wall="my_wall.json")</code></div>
+    </div>
+
+    <div class="card">
+      <h2>Wall check</h2>
+      <div id="verdict" class="verdict warn">&hellip;</div>
+      <div class="stats">
+        <span><b id="nHolds">0</b> holds</span>
+        <span><b id="nStart">0/4</b> start holds</span>
+        <span><b id="nBlocked">0</b> blocked ways out</span>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--hold)"></i>hold</span>
+        <span><i style="background:var(--warn)"></i>way out blocked (a hold 45-60&nbsp;mm above)</span>
+        <span><i style="background:rgba(90,220,140,.6)"></i>fits</span>
+        <span><i style="background:rgba(255,110,110,.6)"></i>overlaps</span>
+        <span><i style="background:#e8ecf2"></i>corner marker (no hold)</span>
+      </div>
+      <div class="cursor" id="cursor">&nbsp;</div>
+    </div>
+  </aside>
+</main>
+<div class="drawer" id="drawer">
+  <button class="close icon" id="drawerClose" title="Close">&times;</button>
+  <h3>Projector</h3>
+  <div class="msg" id="pMsg">&hellip;</div>
+  <div class="muted" id="pProg" style="font-size:12px;margin:-4px 0 8px;word-break:break-all"></div>
+  <div class="row" id="pStartRow"><button class="primary" id="pStart">Start the projector</button>
+    <span class="muted" style="font-size:13px">it then follows this page</span></div>
+  <div id="pOn">
+    <h3>Projector screen</h3>
+    <div class="row"><select id="pScreen" title="The screen the projector is plugged on (extended display)"></select>
+      <span class="muted" id="pFull" style="font-size:13px"></span></div>
+    <h3>Calibration</h3>
+    <div class="row"><button id="pCal" title="The projector lights the wall in white, then shows markers; the cameras must see the four corner markers">Auto (with cameras)</button>
+      <button id="pMan" title="Move the four projected corners onto the board's corners">Manual</button></div>
+    <div class="row" id="pManRow" style="margin-top:8px;display:none">
+      <span class="muted" style="font-size:13px">corner</span>
+      <button class="icon" data-c="3">TL</button><button class="icon" data-c="2">TR</button>
+      <button class="icon" data-c="0">BL</button><button class="icon" data-c="1">BR</button>
+      <button class="icon" data-d="-1,0">&larr;</button><button class="icon" data-d="0,-1">&uarr;</button>
+      <button class="icon" data-d="0,1">&darr;</button><button class="icon" data-d="1,0">&rarr;</button>
+      <label class="chk"><input type="checkbox" id="pBig"> &times;10</label>
+      <button class="primary" id="pManOk">Done</button><button id="pManNo">Cancel</button></div>
+    <h3>On the board</h3>
+    <div class="row"><button id="pAll">All holds</button><button id="pOne">One by one</button>
+      <button class="icon" id="pPrev" title="Previous hold">&lsaquo;</button>
+      <span id="pCur" class="muted" style="min-width:60px;text-align:center">&ndash;</span>
+      <button class="icon" id="pNext" title="Next hold">&rsaquo;</button></div>
+    <div class="row" style="margin-top:8px">
+      <label class="chk"><input type="checkbox" id="pGrid"> hole grid</label>
+      <label class="chk"><input type="checkbox" id="pBoard"> board edge</label>
+      <label class="chk"><input type="checkbox" id="pLabels"> numbers</label></div>
+    <h3>Holds on the real board</h3>
+    <div class="row"><button class="primary" id="pDetect" title="The cameras look at the board and find the holds bolted on it">Detect the holds</button>
+      <button id="pRef" title="Remove every hold first">Photo of the empty wall (optional)</button></div>
+    <div class="muted" style="font-size:12.5px;margin-top:6px">The detection compares the wall with the board's wood
+      colour. Optionally, with <b>no hold on the wall</b>, take a photo of the empty wall first: the detection then
+      compares with that photo instead (more robust to the lighting).</div>
+    <div class="proposal" id="pProp" style="display:none">
+      <div id="pPropTxt"></div>
+      <div id="pPropImgs" style="display:grid;gap:6px;margin-top:8px"></div>
+      <div class="row" style="margin-top:8px"><button class="primary" id="pReplace">Replace the wall</button>
+        <button id="pAdd">Add the new ones</button><button id="pDiscard">Discard</button></div>
+    </div>
+    <h3>Cameras</h3>
+    <div class="row"><span class="muted" style="font-size:13px">RealSense colour</span>
+      <select id="pRes" title="Resolution of the cameras' colour stream"></select>
+      <select id="pFps" title="Frames per second"></select>
+      <button id="pMode" title="Restart the cameras in this mode">Apply</button></div>
+    <label class="chk" style="margin-top:8px"><input type="checkbox" id="pViews"> show what the cameras see, live (corner markers found in green; click to enlarge)</label>
+    <div id="pViewImgs" style="display:grid;gap:6px;margin-top:6px"></div>
+    <div class="row" style="margin-top:14px"><button class="danger" id="pQuit">Stop the projector</button></div>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="viewBig" style="display:none;position:fixed;inset:0;z-index:9;background:rgba(0,0,0,.82);align-items:center;justify-content:center;cursor:zoom-out" title="Click to close">
+  <img id="viewBigImg" style="max-width:96vw;max-height:92vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.6)"></div>
+
+<script>
+const LIMBS=['left_hand','right_hand','left_foot','right_foot'];
+const LIMB_COL={left_hand:'#4da3ff',right_hand:'#8f7bff',left_foot:'#3ddc84',right_foot:'#ffb454'};
+const LIMB_SHORT={left_hand:'LH',right_hand:'RH',left_foot:'LF',right_foot:'RF'};
+const $=id=>document.getElementById(id);
+const cv=$('cv'), ctx=cv.getContext('2d');
+let CFG=null, holds=[], start={}, sel=null, level=2, overlap=null, exitBlock=null;
+let onMarker=new Set();                // grid positions where a hold would cover a corner marker
+let hover=null, drag=null, swallowClick=false, history=[];
+
+// ---- server ---------------------------------------------------------------------------------------------
+// GET (no body) or POST JSON to the server (tools/wall_editor.py); shows when it is stopped
+async function api(path, body){
+  let r;
+  try{
+    r = await fetch(path, body===undefined ? {cache:'no-store'}
+                   : {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    $('down').style.display='none'; $('conn').classList.remove('off'); $('connTxt').textContent='connected';
+  }catch(e){ $('down').style.display='block'; $('conn').classList.add('off'); $('connTxt').textContent='server stopped'; throw e; }
+  const j = await r.json().catch(()=>({error:'HTTP '+r.status}));
+  if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
+  return j;
+}
+function showFile(path){        // the file name (and its folder) in the header, the full path on hover
+  const parts=path.split(/[\\/]/); $('meta').textContent=parts.slice(-2).join('/'); $('meta').title=path;
+}
+// a short message at the bottom of the page
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('show'),2600); }
+
+// ---- geometry (mm, wall seen from the climbing side) -----------------------------------------------------
+// A hold is stored by its LEFT bolt hole (col, row); its socket is one pitch to the right of it (between the two
+// bolts) and socket_below_mm lower.  You aim at the socket, so the interaction works in socket positions.
+const P = {l:40, r:10, t:10, b:30};
+// size the canvas to its box (P: margins for the row and column numbers, px)
+function fitCanvas(){
+  // the wall as tall as the window allows (between 560 and 1100 px), the side column no taller than it
+  const avail = window.innerHeight - document.querySelector('header').offsetHeight - 32 - 24;
+  const H = Math.max(560, Math.min(1100, avail)) - P.t - P.b;
+  cv.height = H + P.t + P.b;
+  cv.width = Math.round(H*CFG.grid.width_mm/CFG.grid.height_mm) + P.l + P.r;
+  // on a narrow window the side column scrolls rather than run past the bottom of the wall
+  $('side').style.maxHeight = window.innerWidth > 860 ? $('stage').offsetHeight + 'px' : '';
+}
+window.addEventListener('resize', ()=>{ if(CFG){ fitCanvas(); draw(); } });
+// wall mm (x right, z up) <-> canvas pixels
+function toPx(x,z){
+  const W=cv.width-P.l-P.r, H=cv.height-P.t-P.b;
+  return [P.l+x/CFG.grid.width_mm*W, P.t+H-z/CFG.grid.height_mm*H];
+}
+function fromPx(u,v){
+  const W=cv.width-P.l-P.r, H=cv.height-P.t-P.b;
+  return [(u-P.l)/W*CFG.grid.width_mm, (P.t+H-v)/H*CFG.grid.height_mm];
+}
+const hole=(c,r)=>[CFG.grid.x0_mm+c*CFG.grid.pitch_mm, CFG.grid.z0_mm+r*CFG.grid.pitch_mm];
+const socketOf=(c,r)=>{ const [x,z]=hole(c+1,r); return [x, z-CFG.socket_below_mm]; };
+function cellAt(x,z){          // hold whose socket is nearest (x, z)
+  return [Math.round((x-CFG.grid.x0_mm)/CFG.grid.pitch_mm-1),
+          Math.round((z+CFG.socket_below_mm-CFG.grid.z0_mm)/CFG.grid.pitch_mm)];
+}
+const onGrid=(c,r)=>c>=0 && c+2<CFG.grid.cols && r>=0 && r<CFG.grid.rows;
+const same=(a,b)=>a&&b&&a[0]===b[0]&&a[1]===b[1];
+// is the point in the polygon (even-odd rule)?
+function inside(px,pz,poly){
+  let ins=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const [xi,zi]=poly[i],[xj,zj]=poly[j];
+    if(((zi>pz)!==(zj>pz)) && px<(xj-xi)*(pz-zi)/(zj-zi)+xi) ins=!ins;
+  }
+  return ins;
+}
+// index of the hold whose body covers (x, z), or -1
+function holdAt(x,z){
+  for(let i=holds.length-1;i>=0;i--){
+    const [sx,sz]=socketOf(...holds[i]);
+    if(inside(x-sx,z-sz,CFG.outline)) return i;
+  }
+  return -1;
+}
+// grid positions whose hold body would cover a marker plate (sampled outline in the plate, or a plate corner in the
+// outline: the same test as wall.py's Hold.on_markers)
+function markerCells(){
+  const out=new Set();
+  for(let c=0;c+2<CFG.grid.cols;c++) for(let r=0;r<CFG.grid.rows;r++){
+    const [sx,sz]=socketOf(c,r), o=CFG.outline;
+    for(const m of CFG.markers){
+      let hit=false;
+      for(let i=0;i<o.length && !hit;i++){ const a=o[i], b=o[(i+1)%o.length];
+        for(let t=0;t<=1;t+=1/39){ const x=sx+a[0]+(b[0]-a[0])*t, z=sz+a[1]+(b[1]-a[1])*t;
+          if(x>m.x0_mm && x<m.x1_mm && z>m.z0_mm && z<m.z1_mm){ hit=true; break; } } }
+      if(!hit) for(const [px,pz] of [[m.x0_mm,m.z0_mm],[m.x1_mm,m.z0_mm],[m.x1_mm,m.z1_mm],[m.x0_mm,m.z1_mm]])
+        if(inside(px-sx,pz-sz,o)){ hit=true; break; }
+      if(hit){ out.add(c+','+r); break; }
+    }
+  }
+  return out;
+}
+// why a hold cannot go on (c, r) (off the grid, overlap), or '' when it can
+function whyNot(c,r,ignore=-1){
+  if(!onGrid(c,r)) return 'no room for the hold here (it spans three holes)';
+  if(onMarker.has(c+','+r)) return 'on a corner marker: the cameras must see it, no hold there';
+  for(let i=0;i<holds.length;i++){
+    if(i===ignore) continue;
+    const [hc,hr]=holds[i];
+    if(overlap.has((c-hc)+','+(r-hr))) return 'too close to another hold: their bodies would overlap';
+  }
+  return null;
+}
+function blockedSet(){        // indices of holds whose way out is blocked, or that block one
+  const out=new Set();
+  for(let i=0;i<holds.length;i++) for(let j=0;j<holds.length;j++){
+    if(i===j) continue;
+    const dr=holds[j][1]-holds[i][1], dc=holds[j][0]-holds[i][0];
+    if(exitBlock.has(dr+','+dc)){ out.add(i); out.add(j); }
+  }
+  return out;
+}
+
+// ---- drawing ------------------------------------------------------------------------------------------------
+// the hold's outline around its socket (sx, sz), as a canvas path
+function bodyPath(sx,sz){
+  ctx.beginPath();
+  CFG.outline.forEach(([x,z],i)=>{ const [a,b]=toPx(sx+x,sz+z); i?ctx.lineTo(a,b):ctx.moveTo(a,b); });
+  ctx.closePath();
+}
+// the whole wall: grid, holds, start holds, the hold under the mouse
+function draw(){
+  if(!CFG) return;
+  const g=CFG.grid;
+  ctx.fillStyle='#0f1216'; ctx.fillRect(0,0,cv.width,cv.height);
+  const [x0,y0]=toPx(0,g.height_mm), [x1,y1]=toPx(g.width_mm,0);
+  ctx.fillStyle='#171b21'; ctx.fillRect(x0,y0,x1-x0,y1-y0);
+  ctx.strokeStyle='#2e3540'; ctx.lineWidth=1; ctx.strokeRect(x0,y0,x1-x0,y1-y0);
+  // holes
+  ctx.fillStyle='#39424f';
+  for(let c=0;c<g.cols;c++) for(let r=0;r<g.rows;r++){
+    const [a,b]=toPx(...hole(c,r)); ctx.beginPath(); ctx.arc(a,b,1.1,0,6.2832); ctx.fill();
+  }
+  // the corner markers' plates (white, 136 mm, black code 100 mm): no hold on them
+  for(const m of CFG.markers){
+    const [px0,py0]=toPx(m.x0_mm,m.z1_mm), [px1,py1]=toPx(m.x1_mm,m.z0_mm), b=(px1-px0)*18/136;
+    ctx.fillStyle='rgba(232,236,242,.88)'; ctx.fillRect(px0,py0,px1-px0,py1-py0);
+    ctx.fillStyle='#1b1f26'; ctx.fillRect(px0+b,py0+b,px1-px0-2*b,py1-py0-2*b);
+    ctx.fillStyle='#e8ecf2'; ctx.font='700 13px ui-sans-serif,system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('ArUco '+m.id,(px0+px1)/2,(py0+py1)/2); ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  }
+  // guides
+  ctx.fillStyle='#8a95a5'; ctx.font='600 13px ui-monospace,monospace';
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let r=0;r<g.rows;r+=5){ const [,b]=toPx(0,hole(0,r)[1]); ctx.fillText(String(r),P.l-8,b); }
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  for(let c=0;c<g.cols;c+=5){ const [a]=toPx(hole(c,0)[0],0); ctx.fillText(String(c),a,cv.height-9); }
+  ctx.textAlign='left';
+  // ghost: the body that would land under the cursor
+  const ghost = drag ? drag.at : (hover && holdAt(...hover.mm)<0 ? hover.cell : null);
+  if(ghost){
+    const why=whyNot(ghost[0],ghost[1], drag?drag.i:-1);
+    const [sx,sz]=socketOf(...ghost);
+    ctx.fillStyle = why ? 'rgba(255,110,110,.18)' : 'rgba(90,220,140,.18)';
+    ctx.strokeStyle = why ? 'rgba(255,110,110,.8)' : 'rgba(90,220,140,.8)';
+    bodyPath(sx,sz); ctx.fill(); ctx.stroke();
+  }
+  const blocked=blockedSet();
+  const startOf={}; for(const [l,h] of Object.entries(start)) startOf[h[0]+','+h[1]]=l;
+  holds.forEach((h,i)=>{
+    if(drag && drag.i===i && drag.moved) return;
+    const [sx,sz]=socketOf(...h), warn=blocked.has(i), bad=onMarker.has(h[0]+','+h[1]);
+    ctx.fillStyle = bad ? 'rgba(255,93,93,.35)' : warn ? 'rgba(255,180,84,.30)' : 'rgba(224,100,42,.26)';
+    ctx.strokeStyle = bad ? 'rgba(255,93,93,.95)' : warn ? 'rgba(255,180,84,.95)' : 'rgba(224,100,42,.8)'; ctx.lineWidth=1;
+    bodyPath(sx,sz); ctx.fill(); ctx.stroke();
+    const [a,b]=toPx(sx,sz);
+    ctx.fillStyle = warn ? '#ffb454' : '#e0642a';
+    ctx.beginPath(); ctx.arc(a,b,2.4,0,6.2832); ctx.fill();
+    ctx.fillStyle='#ffd9c6';
+    for(const k of [0,2]){ const [ha,hb]=toPx(...hole(h[0]+k,h[1])); ctx.beginPath(); ctx.arc(ha,hb,1.1,0,6.2832); ctx.fill(); }
+    const limb=startOf[h[0]+','+h[1]];
+    if(limb){
+      ctx.strokeStyle=LIMB_COL[limb]; ctx.lineWidth=2.6;
+      ctx.beginPath(); ctx.arc(a,b,7.5,0,6.2832); ctx.stroke();
+      // label above the hold, on a dark outline so it reads over holds and holes
+      ctx.font='800 14px ui-sans-serif,system-ui'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+      const [,top]=toPx(sx, sz+Math.max(...CFG.outline.map(o=>o[1])));
+      ctx.lineWidth=4; ctx.strokeStyle='#0f1216'; ctx.strokeText(LIMB_SHORT[limb],a,top-2);
+      ctx.fillStyle=LIMB_COL[limb]; ctx.fillText(LIMB_SHORT[limb],a,top-2);
+      ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    }
+  });
+  updateStatus(blocked);
+  if(proposal){                         // holds detected on the real board, not imported yet
+    ctx.save(); ctx.setLineDash([5,4]); ctx.lineWidth=2; ctx.strokeStyle='#b79bff';
+    for(const h of proposal){ const [sx,sz]=socketOf(...h); bodyPath(sx,sz); ctx.stroke(); }
+    ctx.restore();
+  }
+  publishLive();
+}
+// hold count and warnings under the wall
+function updateStatus(blocked){
+  const nStart=LIMBS.filter(l=>start[l]).length;
+  $('nHolds').textContent=holds.length; $('nStart').textContent=nStart+'/4';
+  $('nBlocked').textContent=blocked.size;
+  const v=$('verdict');
+  if(!holds.length){ v.className='verdict warn'; v.textContent='No holds yet: generate a route or click on the wall.'; }
+  else if(nStart<4){ v.className='verdict warn';
+    v.textContent='Start holds missing: '+LIMBS.filter(l=>!start[l]).map(l=>l.replace('_',' ')).join(', '); }
+  else if(holds.some(h=>onMarker.has(h[0]+','+h[1]))){ v.className='verdict warn';
+    v.textContent=`${holds.filter(h=>onMarker.has(h[0]+','+h[1])).length} hold(s) on a corner marker (red): move them, the cameras must see the four markers.`; }
+  else if(blocked.size){ v.className='verdict warn'; v.textContent=`Ready, but ${blocked.size} holds have a blocked way out (orange).`; }
+  else { v.className='verdict ok'; v.textContent='Ready for the simulator.'; }
+}
+
+// ---- editing ------------------------------------------------------------------------------------------------
+// undo history (200 steps)
+function snapshot(){ history.push(JSON.stringify({holds,start})); if(history.length>200) history.shift(); }
+function undo(){ const s=history.pop(); if(!s) return toast('nothing to undo');
+  ({holds,start}=JSON.parse(s)); renderChips(); draw(); }
+function eventMm(e){ const r=cv.getBoundingClientRect(); return fromPx(e.clientX-r.left, e.clientY-r.top); }
+
+cv.addEventListener('mousedown',e=>{
+  if(sel||e.button!==0) return;
+  const mm=eventMm(e), i=holdAt(...mm);
+  if(i<0) return;
+  drag={i, from:holds[i].slice(), at:holds[i].slice(), moved:false,
+        grab:[mm[0]-socketOf(...holds[i])[0], mm[1]-socketOf(...holds[i])[1]]};
+  cv.style.cursor='grabbing';
+});
+window.addEventListener('mouseup',()=>{
+  if(!drag) return;
+  const d=drag; drag=null; cv.style.cursor='';
+  if(!d.moved){ draw(); return; }
+  swallowClick=true;
+  const why=whyNot(d.at[0],d.at[1],d.i);
+  if(why){ toast(why+': the hold stayed where it was'); draw(); return; }
+  snapshot();
+  holds[d.i]=d.at.slice();
+  for(const [l,h] of Object.entries(start)) if(same(h,d.from)) start[l]=d.at.slice();
+  renderChips(); draw();
+});
+cv.addEventListener('mousemove',e=>{
+  const mm=eventMm(e);
+  if(drag){
+    const at=cellAt(mm[0]-drag.grab[0], mm[1]-drag.grab[1]);
+    if(!same(at,drag.at)){ drag.at=at; if(!same(at,drag.from)) drag.moved=true; draw(); }
+    return;
+  }
+  const cell=cellAt(...mm);
+  hover={mm, cell};
+  const i=holdAt(...mm);
+  cv.style.cursor = sel ? 'pointer' : (i>=0 ? 'grab' : 'crosshair');
+  $('cursor').textContent = i>=0
+    ? `hold (${holds[i][0]}, ${holds[i][1]}): bolts in holes (${holds[i][0]}, ${holds[i][1]}) and (${holds[i][0]+2}, ${holds[i][1]})`
+    : onGrid(...cell) ? `click: hold (${cell[0]}, ${cell[1]}), bolts in holes (${cell[0]}, ${cell[1]}) and (${cell[0]+2}, ${cell[1]})` : ' ';
+  draw();
+});
+cv.addEventListener('mouseleave',()=>{ if(!drag){ hover=null; $('cursor').innerHTML='&nbsp;'; draw(); } });
+cv.addEventListener('click',e=>{
+  if(swallowClick){ swallowClick=false; return; }
+  const mm=eventMm(e), i=holdAt(...mm);
+  if(sel){
+    let h = i>=0 ? holds[i] : null;
+    if(!h){
+      const c=cellAt(...mm), why=whyNot(...c);
+      if(why) return toast(why);
+      snapshot(); holds.push(c); h=c;
+    } else snapshot();
+    for(const [l,s] of Object.entries(start)) if(same(s,h)) delete start[l];
+    start[sel]=h.slice();
+    const next=LIMBS.find(l=>!start[l]);
+    sel = next || null; renderChips(); draw(); return;
+  }
+  if(i>=0){
+    snapshot();
+    const h=holds[i]; holds.splice(i,1);
+    for(const [l,s] of Object.entries(start)) if(same(s,h)) delete start[l];
+    renderChips();
+  }else{
+    const c=cellAt(...mm), why=whyNot(...c);
+    if(why) return toast(why);
+    snapshot(); holds.push(c);
+  }
+  draw();
+});
+window.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey) && e.key==='z' && !/INPUT|SELECT/.test(e.target.tagName)){ e.preventDefault(); undo(); }
+  if(e.key==='Escape' && sel){ sel=null; renderChips(); }
+});
+
+// the start-hold chips (LH, RH, LF, RF)
+function renderChips(){
+  const box=$('chips'); box.innerHTML='';
+  for(const l of LIMBS){
+    const h=start[l], el=document.createElement('div');
+    el.className='chip'+(sel===l?' sel':'');
+    el.innerHTML=`<span class="sw" style="background:${LIMB_COL[l]}"></span>${l.replace('_',' ')} `+
+                 `<span class="muted">${h?`(${h[0]}, ${h[1]})`:'—'}</span>`;
+    el.onclick=()=>{ sel = sel===l ? null : l; renderChips(); };
+    box.appendChild(el);
+  }
+}
+// the level buttons N1-N4 (the seed is greyed out for N1)
+function renderLevels(){
+  const box=$('levels'); box.innerHTML='';
+  for(const [k,lv] of Object.entries(CFG.levels)){
+    const b=document.createElement('button');
+    b.className='lv'+(+k===level?' on':''); b.textContent=lv.name;
+    b.onclick=()=>{ level=+k; renderLevels(); };
+    box.appendChild(b);
+  }
+  // N1 is always the same ladder: no seed
+  const seeded=CFG.levels[level].seeded;
+  $('seed').disabled=!seeded; $('dice').disabled=!seeded;
+  $('seed').closest('label').classList.toggle('off',!seeded);
+}
+
+// ---- Projector panel: commands to climbing-projector through the editor's server --------------------------
+let proj=null, proposal=null, propSeen=0, drawerOpen=false;
+const projCmd=(cmd, extra={})=>api('/api/projector', {cmd, ...extra}).catch(e=>toast(e.message));
+async function projPoll(){
+  try{ proj=await api('/api/projector'); }catch(_){ return; }
+  const st=proj.status||{}, run=proj.running;
+  $('projBtn').classList.toggle('run', run);
+  if(!drawerOpen && !(st.detection && st.detection.id>propSeen)) return;
+  $('pStartRow').style.display = run ? 'none' : '';
+  $('pOn').style.display = run ? '' : 'none';
+  $('pStart').disabled = !proj.installed;
+  $('pMsg').textContent = run ? `${st.calibrated?'Calibrated':'Not calibrated yet'} · ${st.cameras||0} camera(s)`+
+      (st.reference?' · empty-board reference':'')+(st.message?` — ${st.message}`:'')
+    : proj.installed ? (st.error ? 'Could not start: '+st.error : 'Not running.') : 'climbing-projector is not installed on this computer (the organisers have it).';
+  $('pManRow').style.display = st.manual ? '' : 'none';
+  $('pProg').textContent = proj.program ? (proj.dev ? 'development version (CLIMBING_PROJECTOR): ' : 'program: ')+proj.program : '';
+  const scr=st.screens||[], opts=scr.map((m,i)=>`<option value="${i}">${m.name} · ${m.width} × ${m.height}${m.primary?' (main screen)':''}</option>`).join('');
+  if($('pScreen').dataset.opts!==opts){ $('pScreen').innerHTML=opts; $('pScreen').dataset.opts=opts; }
+  const cur=scr.findIndex(m=>m.name===st.screen); if(cur>=0 && document.activeElement!==$('pScreen')) $('pScreen').value=cur;
+  $('pFull').textContent = st.fullscreen===false ? 'not full screen (window manager)' : '';
+  // camera modes: resolutions, then the FPS of the chosen resolution
+  const modes=st.camera_modes||[], cm=st.camera_mode;
+  const resKeys=[...new Set(modes.map(m=>m[0]+'x'+m[1]))];
+  const resOpts=resKeys.map(k=>`<option value="${k}">${k.replace('x',' × ')}</option>`).join('');
+  if($('pRes').dataset.opts!==resOpts){ $('pRes').innerHTML=resOpts; $('pRes').dataset.opts=resOpts;
+    if(cm) $('pRes').value=cm[0]+'x'+cm[1]; fillFps(cm&&cm[2]); }
+  for(const id of ['pRes','pFps','pMode']) $(id).disabled=!modes.length;
+  $('pMode').title = cm ? `now ${cm[0]} × ${cm[1]} at ${cm[2]} FPS` : 'no camera';
+  $('pCur').textContent = !st.n ? '–' : st.current>=0 && st.current<st.n ? `${st.current+1} / ${st.n}` : `all ${st.n}`;
+  $('pAll').classList.toggle('on', st.current<0); $('pOne').classList.toggle('on', st.current>=0);
+  for(const [id,k] of [['pGrid','grid'],['pBoard','board'],['pLabels','labels']]) $(id).checked=!!st[k];
+  const d=st.detection;
+  if(d && d.id>propSeen){
+    propSeen=d.id; proposal=d.holds.map(h=>[h.col,h.row]);
+    const have=new Set(holds.map(h=>h.join(','))), got=new Set(proposal.map(h=>h.join(',')));
+    const fresh=proposal.filter(h=>!have.has(h.join(','))).length, gone=holds.filter(h=>!got.has(h.join(','))).length;
+    $('pPropTxt').innerHTML=`<b>${proposal.length} holds found</b> on the board (dashed violet on the wall): `+
+      `${fresh} not in this wall, ${gone} of this wall not found.`;
+    $('pPropImgs').innerHTML='';
+    for(const u of d.images||[]){ const im=document.createElement('img'); im.src=u; im.title='What the camera saw: the holds found in magenta (click to enlarge)';
+      im.style.cssText='width:100%;border-radius:6px;border:1px solid var(--line);cursor:zoom-in';
+      im.onclick=()=>{ $('viewBig').dataset.k=-1; $('viewBigImg').src=u; $('viewBig').style.display='flex'; };
+      $('pPropImgs').appendChild(im); }
+    $('pProp').style.display=''; openDrawer(true); draw();
+  }
+}
+function openDrawer(open){ drawerOpen=open; $('drawer').classList.toggle('open', open); if(open) projPoll(); }
+$('projBtn').onclick=()=>openDrawer(!drawerOpen);
+$('drawerClose').onclick=()=>openDrawer(false);
+$('pStart').onclick=async()=>{ await projCmd('start'); toast('starting the projector…'); };
+$('pCal').onclick=()=>projCmd('calibrate');
+$('pScreen').onchange=()=>projCmd('screen',{index:+$('pScreen').value});
+function fillFps(keep){
+  const st=(proj&&proj.status)||{}, [w,h]=($('pRes').value||'x').split('x').map(Number);
+  const fps=(st.camera_modes||[]).filter(m=>m[0]===w&&m[1]===h).map(m=>m[2]).sort((a,b)=>b-a);
+  $('pFps').innerHTML=fps.map(f=>`<option value="${f}">${f} FPS</option>`).join('');
+  if(keep && fps.includes(keep)) $('pFps').value=keep;
+}
+$('pRes').onchange=()=>fillFps(+$('pFps').value);
+$('pMode').onclick=()=>{ const [w,h]=$('pRes').value.split('x').map(Number);
+  projCmd('camera_mode',{width:w,height:h,fps:+$('pFps').value}); toast('restarting the cameras…'); };
+$('viewBig').onclick=()=>{ $('viewBig').style.display='none'; };
+$('pMan').onclick=()=>projCmd('manual');
+$('pManOk').onclick=()=>projCmd('manual_done');
+$('pManNo').onclick=()=>projCmd('manual_cancel');
+let corner=3;
+for(const b of $('pManRow').querySelectorAll('[data-c]')) b.onclick=()=>{ corner=+b.dataset.c; projCmd('corner',{index:corner}); };
+for(const b of $('pManRow').querySelectorAll('[data-d]')) b.onclick=()=>{
+  const [dx,dy]=b.dataset.d.split(',').map(Number), k=$('pBig').checked?10:1;
+  projCmd('corner',{index:corner, dx:dx*k, dy:dy*k}); };
+$('pAll').onclick=()=>projCmd('show',{mode:'all'});
+$('pOne').onclick=()=>projCmd('show',{mode:'one'});
+$('pPrev').onclick=()=>projCmd('step',{by:-1});
+$('pNext').onclick=()=>projCmd('step',{by:1});
+for(const [id,k] of [['pGrid','grid'],['pBoard','board'],['pLabels','labels']]) $(id).onchange=()=>projCmd('toggle',{what:k});
+$('pDetect').onclick=()=>{ projCmd('detect'); toast('detecting the holds…'); };
+$('pRef').onclick=()=>projCmd('reference');
+$('pQuit').onclick=()=>projCmd('quit');
+// camera views: asked again every 5 s while the box is ticked (the projector sends them for 10 s), shown each second
+let viewsAsked=0;
+setInterval(async()=>{
+  if(!$('pViews').checked || !drawerOpen || !(proj&&proj.running)){ $('pViewImgs').innerHTML=''; return; }
+  const big=$('viewBig').style.display==='flex';
+  if(Date.now()-viewsAsked > 5000){ viewsAsked=Date.now(); projCmd('views',{width: big ? 1280 : 480}); }
+  try{ const v=(await api('/api/projector_views')).views||[];
+       if(big){ const k=+$('viewBig').dataset.k; if(k>=0 && v[k]) $('viewBigImg').src=v[k]; }
+       // keep the <img> elements (no flicker), only change their sources
+       const box=$('pViewImgs');
+       while(box.children.length>v.length) box.lastChild.remove();
+       v.forEach((u,k)=>{ let im=box.children[k];
+         if(!im){ im=document.createElement('img'); im.style.cssText='width:100%;border-radius:6px;border:1px solid var(--line);cursor:zoom-in';
+                  im.onclick=()=>{ $('viewBig').dataset.k=k; $('viewBigImg').src=im.src; $('viewBig').style.display='flex'; viewsAsked=0; };
+                  box.appendChild(im); }
+         im.src=u; }); }catch(_){}
+}, 330);
+function endProposal(){ proposal=null; $('pProp').style.display='none'; draw(); }
+$('pReplace').onclick=()=>{ snapshot(); holds=proposal.map(h=>h.slice());
+  const got=new Set(holds.map(h=>h.join(',')));
+  for(const l of LIMBS) if(start[l] && !got.has(start[l].join(','))) delete start[l];
+  renderChips(); endProposal(); toast('wall replaced by the holds found: pick the start holds if needed'); };
+$('pAdd').onclick=()=>{ snapshot(); const have=new Set(holds.map(h=>h.join(','))); let n=0;
+  for(const h of proposal) if(!have.has(h.join(',')) && !whyNot(h[0],h[1])){ holds.push(h.slice()); n++; }
+  renderChips(); endProposal(); toast(`${n} hold(s) added`); };
+$('pDiscard').onclick=endProposal;
+setInterval(projPoll, 1000);
+
+// ---- live: a projector (climbing-projector --follow) draws on the real board what this page shows ------------
+let liveSent='', liveTimer=null;
+function publishLive(){                 // at most every 80 ms, only when something changed
+  if(liveTimer) return;
+  liveTimer=setTimeout(()=>{
+    liveTimer=null;
+    const g = drag ? drag.at : (hover && holdAt(...hover.mm)<0 ? hover.cell : null);
+    const body=JSON.stringify({wall:wallJson(), blocked:[...blockedSet()],
+      ghost: g ? {col:g[0], row:g[1], ok:!whyNot(g[0],g[1], drag?drag.i:-1)} : null});
+    if(body===liveSent) return;
+    liveSent=body;
+    fetch('/api/live',{method:'POST', headers:{'Content-Type':'application/json'}, body}).catch(()=>{});
+  }, 80);
+}
+
+// ---- walls in and out ---------------------------------------------------------------------------------------
+// load a wall's JSON form into the editor / the editor's wall as JSON
+function setWall(w){
+  holds=w.holds.map(h=>[h.col,h.row]);
+  start={}; for(const [l,h] of Object.entries(w.start||{})) start[l]=[h.col,h.row];
+  if(w.name) $('name').value=w.name;
+  $('savedTo').innerHTML=`In Python: <code>ClimbingSim(wall="${$('name').value}.json")</code>`;
+  sel=null; renderChips(); draw();
+}
+function wallJson(){
+  return {name:$('name').value.trim()||'my_wall', description:'made with climbing-sim-wall-editor',
+          holds:holds.map(([col,row])=>({col,row})),
+          start:Object.fromEntries(LIMBS.filter(l=>start[l]).map(l=>[l,{col:start[l][0],row:start[l][1]}]))};
+}
+// the route of the selected level and seed
+async function generate(){
+  if(holds.length) snapshot();
+  setWall(await api(`/api/generate?level=${level}&seed=${CFG.levels[level].seeded ? (+$('seed').value||0) : 0}`));
+  toast(CFG.levels[level].seeded ? `${CFG.levels[level].name}, seed ${$('seed').value}: ${holds.length} holds`
+                                 : `${CFG.levels[level].name}: ${holds.length} holds`);
+}
+$('gen').onclick=generate;
+$('dice').onclick=()=>{ $('seed').value=Math.floor(Math.random()*100000); generate(); };
+$('clear').onclick=()=>{ if(!holds.length) return; snapshot(); holds=[]; start={}; renderChips(); draw(); };
+$('loadb').onclick=async()=>{ if(holds.length) snapshot(); setWall(await api('/api/wall?name='+$('bundled').value)); };
+$('save').onclick=async()=>{
+  try{ const r=await api('/api/save',{wall:wallJson(), path:CFG.file||null});
+       CFG.file=r.saved; $('savedTo').innerHTML=`saved: <code>${r.saved}</code>`; showFile(r.saved);
+       toast('saved '+r.saved); }
+  catch(e){ toast('not saved: '+e.message); }
+};
+$('download').onclick=()=>{
+  const w=wallJson(), a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(w,null,1)],{type:'application/json'}));
+  a.download=w.name+'.json'; a.click(); URL.revokeObjectURL(a.href);
+};
+$('open').onclick=()=>$('file').click();
+$('file').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{ const w=JSON.parse(await f.text()); if(holds.length) snapshot(); setWall(w); toast('opened '+f.name); }
+  catch(err){ toast('not a wall file: '+err.message); }
+  e.target.value='';
+};
+$('try').onclick=async()=>{
+  if(LIMBS.some(l=>!start[l])) return toast('set the four start holds first (step 2)');
+  try{ await api('/api/try',{wall:wallJson()}); toast('opening MuJoCo… (it takes a few seconds)'); }
+  catch(e){ toast('could not open the simulator: '+e.message); }
+};
+
+// ---- start ----------------------------------------------------------------------------------------------------
+(async()=>{
+  CFG=await api('/api/config');
+  overlap=new Set(CFG.overlap.map(o=>o.join(',')));
+  exitBlock=new Set(CFG.exit_block.map(o=>o.join(',')));
+  CFG.markers=CFG.markers||[];           // a server older than the page: no marker zones
+  onMarker=markerCells();
+  fitCanvas(); renderLevels();
+  $('bundled').innerHTML=CFG.bundled.map(n=>`<option value="${n}">${/^N\d$/.test(n)?`${n}: level ${n[1]} (rulebook)`:n}</option>`).join('');
+  if(CFG.file){ CFG.fileName=CFG.file.split(/[\\/]/).pop().replace(/\.json$/,'');
+                setWall(await api('/api/wall')); showFile(CFG.file); }
+  else { $('meta').textContent='new wall, not saved yet'; renderChips(); draw(); }
+  const q=new URLSearchParams(location.search);          // ?level=3&seed=7 opens with that route
+  if(q.has('level')||q.has('seed')){ level=+(q.get('level')||level); $('seed').value=+(q.get('seed')||0);
+                                     renderLevels(); await generate(); }
+  setInterval(()=>api('/api/ping').catch(()=>{}), 5000);
+})();
+</script>
+</body>
+</html>

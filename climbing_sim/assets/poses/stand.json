@@ -1,0 +1,35 @@
+{
+ "note": "standing on the floor in front of the wall (world frame of climbing_sim), the mount-from-the-floor start spot: the standing pose of Rhoban's walking environment (mjlab_microban HOME_FRAME, the pose the real robot stands in by itself), shoulder pitches +pi/2 (arms along the body: walking 0 = climbing_sim +pi/2); trunk pitched so that the soles are flat on the floor",
+ "trunk_pos": [
+  0.385,
+  -0.157172,
+  0.169951
+ ],
+ "trunk_quat": [
+  0.704436,
+  -0.061396,
+  0.061396,
+  0.704436
+ ],
+ "joints": {
+  "head": 0.0,
+  "right_shoulder_pitch": 1.570796,
+  "right_shoulder_roll": -0.174533,
+  "right_elbow": -0.349066,
+  "right_hip_yaw": 0.0,
+  "right_hip_roll": -0.087266,
+  "right_hip_pitch": -0.174533,
+  "right_knee": 0.0,
+  "right_ankle_pitch": 0.0,
+  "right_ankle_roll": 0.087266,
+  "left_shoulder_pitch": 1.570796,
+  "left_shoulder_roll": 0.174533,
+  "left_elbow": -0.349066,
+  "left_hip_yaw": 0.0,
+  "left_hip_roll": 0.087266,
+  "left_hip_pitch": -0.174533,
+  "left_knee": 0.0,
+  "left_ankle_pitch": 0.0,
+  "left_ankle_roll": -0.087266
+ }
+}

@@ -1,0 +1,14 @@
+__pycache__/
+*.egg-info/
+.venv/
+build/
+*.png
+!docs/*.png
+uv.lock
+
+# the projector program (climbing-projector, compiled; not in git for now)
+climbing_sim/tools/bin/
+
+# the projector calibration of the room (written by climbing-projector, local)
+projector_calibration.json
+detected_wall.json
