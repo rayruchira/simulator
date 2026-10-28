@@ -219,8 +219,9 @@ a hold that blocks the way out of a socket (a ball leaves a socket almost vertic
 
 **Projector** (header button): with the hackathon's video projector and cameras, the editor shows the wall being
 edited on the real board, live (the hold under the cursor too), one hold at a time for bolting them, and finds the
-holds already bolted on the board to import them. It drives `climbing-projector`, a separate program the organisers
-provide; without it the panel says so.
+holds already bolted on the board to import them. It drives `climbing-projector`, a separate compiled program: the
+first time, the panel's **Download** button fetches it from this repository's latest release, for your computer
+(Linux, Windows, macOS 15+ on Apple silicon), into `climbing_sim/tools/bin/` (not in git).
 
 **Command line** (`climbing-sim-wall`) and Python:
 

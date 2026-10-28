@@ -10,22 +10,26 @@ browser.  The page draws the wall and checks the holds itself; it asks this serv
 on the wall in MuJoCo.  Stop it with Ctrl+C.
 
 The page's Projector panel drives ``climbing-projector`` (a separate program, given compiled: it detects the corner
-markers and the holds on the real board with the cameras).  This server only relays: the page's commands go to the
+markers and the holds on the real board with the cameras). When it is not on this computer, the panel downloads it
+from the simulator's latest release (its file for this system, checked against the release's SHA256SUMS).  This server only relays: the page's commands go to the
 projector when it polls ``/api/live``, the projector's state (calibration, holds detected) comes back through
 ``/api/projector_status``.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import pathlib
+import platform
 import shutil
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+import urllib.request
 
 from ..routes import generate_wall
 from ..wall import (EXIT_BLOCK, GRID_COLS, GRID_ROWS, GRID_X0, GRID_Z0, HOLE_PITCH, OVERLAP, SOCKET_BELOW, WALL_HEIGHT,
@@ -37,6 +41,46 @@ PROJECTOR_ENV = "CLIMBING_PROJECTOR"
 PROJECTOR_BIN = pathlib.Path(__file__).parent / "bin" / ("climbing-projector.exe" if os.name == "nt"
                                                          else "climbing-projector")
 _LOCK = threading.Lock()
+#: the compiled projector program, one file per system, attached to the simulator's releases
+RELEASE = "https://github.com/rock-climbing-robots/simulator/releases/latest/download/"
+ASSETS = {("Linux", "x86_64"): "climbing-projector-linux-x86_64",
+          ("Windows", "AMD64"): "climbing-projector-windows-x86_64.exe",
+          ("Darwin", "arm64"): "climbing-projector-macos-arm64"}
+
+
+def projector_asset() -> str | None:
+    """The release file of the projector program for this computer, or None when there is none for it."""
+    return ASSETS.get((platform.system(), platform.machine()))
+
+
+def download_projector(progress: dict):
+    """Download the projector program into tools/bin/ (``progress``: done, total, error, ok; updated as it goes)."""
+    asset = projector_asset()
+    try:
+        if asset is None:
+            raise RuntimeError(f"no climbing-projector for {platform.system()} {platform.machine()}")
+        sums = urllib.request.urlopen(RELEASE + "SHA256SUMS", timeout=30).read().decode()
+        want = next((line.split()[0] for line in sums.splitlines() if line.strip().endswith(asset)), None)
+        if want is None:
+            raise RuntimeError(f"{asset} is not in the release's SHA256SUMS")
+        PROJECTOR_BIN.parent.mkdir(parents=True, exist_ok=True)
+        part = PROJECTOR_BIN.with_name(PROJECTOR_BIN.name + ".part")
+        h = hashlib.sha256()
+        with urllib.request.urlopen(RELEASE + asset, timeout=30) as r, open(part, "wb") as f:
+            progress["total"] = int(r.headers.get("Content-Length") or 0)
+            while chunk := r.read(1 << 20):
+                f.write(chunk); h.update(chunk)
+                progress["done"] += len(chunk)
+        if h.hexdigest() != want:
+            part.unlink(missing_ok=True)
+            raise RuntimeError("the file downloaded does not match the release's checksum: try again")
+        part.chmod(0o755)
+        os.replace(part, PROJECTOR_BIN)
+        progress["ok"] = True
+    except Exception as e:      # noqa: BLE001 -- shown in the page
+        progress["error"] = str(e)
+    finally:
+        progress["running"] = False
 
 
 def projector_program() -> str | None:
@@ -126,11 +170,19 @@ class WallEditor(JsonHandler):
         proj = self.state["projector"]
         exe = projector_program()
         return {"installed": exe is not None, "program": exe, "dev": bool(exe and os.environ.get(PROJECTOR_ENV)),
-                "running": time.time() - proj["seen"] < 3, "status": proj["status"]}
+                "running": time.time() - proj["seen"] < 3, "status": proj["status"],
+                "can_download": projector_asset() is not None, "download": proj.get("download")}
 
     def post_projector(self, body):
         """A command from the page: ``start`` launches the projector program following this editor; the others
         (calibrate, manual, corner, show, step, toggle, reference, detect, quit) wait for its next poll."""
+        if body.get("cmd") == "download":                     # the program from the simulator's release
+            dl = self.state["projector"].get("download")
+            if not (dl and dl["running"]):
+                dl = self.state["projector"]["download"] = {"running": True, "done": 0, "total": 0, "error": None,
+                                                            "ok": False}
+                threading.Thread(target=download_projector, args=(dl,), daemon=True).start()
+            return {"ok": True}
         if body.get("cmd") == "start":
             exe = projector_program()
             if exe is None:

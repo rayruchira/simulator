@@ -207,6 +207,8 @@
   <h3>Projector</h3>
   <div class="msg" id="pMsg">&hellip;</div>
   <div class="muted" id="pProg" style="font-size:12px;margin:-4px 0 8px;word-break:break-all"></div>
+  <div class="row" id="pDlRow" style="display:none"><button class="primary" id="pDl">Download climbing-projector</button>
+    <span class="muted" id="pDlTxt" style="font-size:13px"></span></div>
   <div class="row" id="pStartRow"><button class="primary" id="pStart">Start the projector</button>
     <span class="muted" style="font-size:13px">it then follows this page</span></div>
   <div id="pOn">
@@ -580,12 +582,19 @@ async function projPoll(){
   const st=proj.status||{}, run=proj.running;
   $('projBtn').classList.toggle('run', run);
   if(!drawerOpen && !(st.detection && st.detection.id>propSeen)) return;
-  $('pStartRow').style.display = run ? 'none' : '';
+  const dl=proj.download, dling=!!(dl&&dl.running);
+  $('pStartRow').style.display = run || !proj.installed ? 'none' : '';
+  $('pDlRow').style.display = !run && !proj.installed && proj.can_download ? '' : 'none';
+  $('pDl').disabled = dling;
+  $('pDlTxt').textContent = dling ? (dl.total ? `${Math.round(100*dl.done/dl.total)} % of ${Math.round(dl.total/1e6)} MB`
+      : `${Math.round(dl.done/1e6)} MB…`) : dl&&dl.error ? 'failed: '+dl.error : 'from the simulator\'s release, for this computer';
   $('pOn').style.display = run ? '' : 'none';
   $('pStart').disabled = !proj.installed;
   $('pMsg').textContent = run ? `${st.calibrated?'Calibrated':'Not calibrated yet'} · ${st.cameras||0} camera(s)`+
       (st.reference?' · empty-board reference':'')+(st.message?` — ${st.message}`:'')
-    : proj.installed ? (st.error ? 'Could not start: '+st.error : 'Not running.') : 'climbing-projector is not installed on this computer (the organisers have it).';
+    : proj.installed ? (st.error ? 'Could not start: '+st.error : 'Not running.')
+    : proj.can_download ? 'climbing-projector is not on this computer yet: download it (once).'
+    : 'climbing-projector does not exist for this system (Linux, Windows, macOS on Apple silicon).';
   $('pManRow').style.display = st.manual ? '' : 'none';
   $('pProg').textContent = proj.program ? (proj.dev ? 'development version (CLIMBING_PROJECTOR): ' : 'program: ')+proj.program : '';
   const scr=st.screens||[], opts=scr.map((m,i)=>`<option value="${i}">${m.name} · ${m.width} × ${m.height}${m.primary?' (main screen)':''}</option>`).join('');
@@ -622,6 +631,7 @@ function openDrawer(open){ drawerOpen=open; $('drawer').classList.toggle('open',
 $('projBtn').onclick=()=>openDrawer(!drawerOpen);
 $('drawerClose').onclick=()=>openDrawer(false);
 $('pStart').onclick=async()=>{ await projCmd('start'); toast('starting the projector…'); };
+$('pDl').onclick=async()=>{ await projCmd('download'); projPoll(); };
 $('pCal').onclick=()=>projCmd('calibrate');
 $('pScreen').onchange=()=>projCmd('screen',{index:+$('pScreen').value});
 function fillFps(keep){
