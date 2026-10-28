@@ -6,6 +6,17 @@ markers and the two cameras. Your job: make the robot climb, by motion planning,
 
 ![The two ways to start: standing on the floor, or hanging on the start holds](docs/start_poses.png)
 
+**Two ways to simulate**, the same robot and the same physics underneath:
+
+| | Fast: plan, learn, evaluate | As on the robot: test before deploying |
+|---|---|---|
+| What | this package, in Python: `sim.step(target)` | the robot's own program on this wall: `make sim WALL=N2` in microban |
+| Speed | as fast as it computes (~2 ms per 20 ms step), no window (`sim.view()` to watch) | real time, 50 Hz, MuJoCo's window |
+| Your code | your planner, your RL, your `Controller` (`run_controller`) | your `Controller` (`CONTROLLER=...`) or your moves, exactly what `make deploy` sends |
+| Around it | save / restore a state, many processes in parallel | keyboard, gamepad, live dashboard, torque off at start, the robot's safeties |
+
+The sensors are the robot's in both (with their delays): what works in one works in the other.
+
 **Contents:** [Install](#install) · [Quick start](#quick-start) · [The robot](#the-robot) ·
 [Controlling the robot](#controlling-the-robot) · [Frames](#frames) · [Walls and holds](#walls-and-holds) ·
 [Cameras](#cameras) · [Examples](#examples) · [What is simulated](#what-is-simulated) · [Layout](#layout)
@@ -25,8 +36,8 @@ Then, in `simulator/`, with [uv](https://docs.astral.sh/uv/getting-started/insta
 installed by uv if needed):
 
 ```bash
-uv sync                          # .venv with mujoco, numpy, pillow and BAM (Rhoban's servo models, from GitHub,
-                                 # at a fixed commit); version bounds in pyproject.toml
+uv sync                          # .venv with Rhoban's robot simulator (microban_sim: the robot, its servos simulated
+                                 # by BAM), mujoco, numpy, pillow; version bounds in pyproject.toml
 uv run python examples/view.py   # the robot hanging on the start holds of wall N2, in MuJoCo's viewer
 ```
 
@@ -82,8 +93,9 @@ servos (`kp_fw=125`) it falls unless balanced actively.
 ![The control loop](docs/control_loop.png)
 
 `obs = sim.step(target)` sends the 19 joint targets (rad, order `JOINTS`) and simulates 20 ms
-(`sim.control_dt`); `target=None` keeps the last ones. As on the real robot, the targets reach the servos 20 ms
-after they are sent, and a joint under load stops short of its target.
+(`sim.control_dt`); `target=None` keeps the last ones. As on the real robot, the servos act on a target 10 ms
+after it is sent (measured on the robot: its program reads the sensors, computes, then writes), and a joint under
+load stops short of its target.
 
 These 20 ms are **simulated time**: `step()` returns as soon as MuJoCo has computed them, about 2 ms of real time
 on a laptop without images. The simulation does not run in real time; the real robot runs the same loop at
@@ -92,7 +104,9 @@ on a laptop without images. The simulation does not run in real time; the real r
 ### The observation: what the real robot measures
 
 `step()` returns it, `sim.observation()` gives it at any time. A controller meant for the real robot may use only
-this. The IMU values are in the trunk frame (see [Frames](#frames)).
+this. The IMU values are in the trunk frame (see [Frames](#frames)). As on the robot, some arrive late: the joint
+velocities by one step (20 ms), the gyro and the accelerometer by 3, the orientation (`gravity`, `quat`) by 4
+(`ClimbingSim(ideal_sensors=True)`: none, for debugging).
 
 | Key | Shape | Unit | What |
 |---|---|---|---|
@@ -146,7 +160,7 @@ processes for many robots at once.
 
 ### Options and attributes
 
-`ClimbingSim(wall="N2", cameras=None, control_dt=0.02, latency_ms=20.0, kp_fw=400.0, vin=7.5, seed=None)`
+`ClimbingSim(wall="N2", cameras=None, control_dt=0.02, latency_ms=10.0, kp_fw=400.0, vin=7.5, ideal_sensors=False, seed=None)`
 
 * `wall`: a bundled wall name (`"N1"`, `"N2"`, `"N3"`), a wall JSON file or a `Wall`.
 * `cameras`: a camera JSON file (see [Cameras](#cameras)), a list of `Camera`, `None` for two default cameras, or
@@ -154,6 +168,10 @@ processes for many robots at once.
 * `control_dt`: the duration of one `step()` (s); `latency_ms`: the command latency.
 * `kp_fw`: the servos' firmware P gain, 400 (factory) by default, 125 for reinforcement learning.
 * `vin`: the servos' supply voltage (V); `seed`: seed of `sim.rng`, a numpy generator for your own randomisation.
+* `ideal_sensors`: every measurement of the current step, without the robot's delays.
+
+`sim.view()` opens MuJoCo's viewer on the simulation: the steps then show in it, at real time
+(`sim.view(realtime=False)`: as fast as they compute).
 
 `sim.set_torque(False)` makes the servos limp, as the real robot's Torque Enable (one bool, or 19 in the order
 `JOINTS`); `reset()` and `reset_hanging()` put the torque back on.
@@ -290,7 +308,11 @@ to frame the whole 1.4 m wall vertically.
 * **The servos**: the 19 Dynamixel XL330 are simulated with [BAM](https://github.com/Rhoban/bam), a model
   identified on a test bench: firmware position control (P gain `kp_fw`), PWM
   voltage, DC motor with back-EMF, current limit (1.75 A), load-dependent friction, a supply voltage that drops
-  under load, a 20 ms command latency.
+  under load, a 10 ms command latency; the sensors' delays (above).
+
+The robot, its servos and its sensors come from Rhoban's robot simulator,
+[microban_sim](https://github.com/Rhoban/microban_sim) (`ClimbingSim` is its `MicrobanSim` in the climbing version, with
+the wall around it); this package adds the wall, the holds, the markers, the cameras and the tools.
 * **The wall**: the board, the hole grid and the holds, drawn with the real hold's mesh. A hold collides as 30
   spheres that make its socket and lip (all inside the real hold), 4 hulls (back plate, gussets, rear block) and a
   thin skin on the outside of the cup. A ball end seats 0.3-0.45 mm from the socket centre.
@@ -307,14 +329,14 @@ robot convex parts (blue), servo boxes (yellow), ball ends (cyan), hold spheres 
 
 ```
 climbing_sim/
-  sim.py        ClimbingSim: physics, BAM servos, observations, ground truth, rendering
-  scene.py      the MuJoCo scene: robot, wall, holds, markers, cameras (build_spec)
+  sim.py        ClimbingSim (microban_sim's robot simulator + the wall): starts, balls and holds, cameras
+  scene.py      the MuJoCo scene: microban_sim's robot and floor, the wall, holds, markers, cameras (build_spec)
   wall.py       Hold, Wall, the grid and the frames
   routes.py     generate_wall(level, seed): the N1-N4 routes
   cameras.py    Camera (OpenCV conventions), D435i intrinsics, marker visibility
   aruco.py      the corner markers
   walls/        the competition walls N1, N2, N3
-  assets/       robot (MJCF + meshes) and hold meshes / collision shapes
+  assets/       hold meshes / collision shapes, the start poses
   tools/        climbing-sim-wall-editor, climbing-sim-wall, climbing-sim-cameras
 docs/           the README's figures (make_figures.py makes them)
 examples/       the examples above

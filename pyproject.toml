@@ -9,11 +9,11 @@ description = "MuJoCo simulator of the climbing robot on the hackathon wall (rob
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "microban-sim",             # Rhoban's robot simulator: the robot (microban_model), its servos (BAM), its sensors
+    "microban-model",           # the robot (Rhoban/microban_model, meshes in Git LFS), shared with microban
     "mujoco>=3.11,<4",          # tested with 3.11 and 3.16
     "numpy>=1.26",
     "pillow>=10",
-    "better-actuator-models @ git+https://github.com/Rhoban/bam.git@e9a619d56da5236206f4de6ceec2c1ee1b497b5c",   # latest (2026-09-13)
-    "microban-model",           # the robot (Rhoban/microban_model, meshes in Git LFS), shared with microban
 ]
 
 [project.scripts]
@@ -29,3 +29,4 @@ climbing_sim = ["assets/**/*", "walls/*.json", "tools/web/*.html"]
 
 [tool.uv.sources]
 microban-model = { git = "https://github.com/Rhoban/microban_model", lfs = true }
+microban-sim = { path = "../microban_sim", editable = true }    # until published: then git = "https://github.com/Rhoban/microban_sim"

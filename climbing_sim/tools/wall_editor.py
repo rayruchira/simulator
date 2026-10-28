@@ -40,12 +40,14 @@ from ._webapp import WEB, JsonHandler, serve, single_blas_thread
 PROJECTOR_ENV = "CLIMBING_PROJECTOR"
 PROJECTOR_BIN = pathlib.Path(__file__).parent / "bin" / ("climbing-projector.exe" if os.name == "nt"
                                                          else "climbing-projector")
+#: macOS: an application bundle (downloaded zipped), the program inside it
+PROJECTOR_APP = PROJECTOR_BIN.with_name("climbing-projector.app")
 _LOCK = threading.Lock()
 #: the compiled projector program, one file per system, attached to the simulator's releases
 RELEASE = "https://github.com/rock-climbing-robots/simulator/releases/latest/download/"
 ASSETS = {("Linux", "x86_64"): "climbing-projector-linux-x86_64",
           ("Windows", "AMD64"): "climbing-projector-windows-x86_64.exe",
-          ("Darwin", "arm64"): "climbing-projector-macos-arm64"}
+          ("Darwin", "arm64"): "climbing-projector-macos-arm64.zip"}
 
 
 def projector_asset() -> str | None:
@@ -74,8 +76,17 @@ def download_projector(progress: dict):
         if h.hexdigest() != want:
             part.unlink(missing_ok=True)
             raise RuntimeError("the file downloaded does not match the release's checksum: try again")
-        part.chmod(0o755)
-        os.replace(part, PROJECTOR_BIN)
+        if asset.endswith(".zip"):                           # macOS: the application bundle
+            import zipfile
+            shutil.rmtree(PROJECTOR_APP, ignore_errors=True)
+            with zipfile.ZipFile(part) as z:
+                z.extractall(PROJECTOR_APP.parent)
+            part.unlink()
+            for f in (PROJECTOR_APP / "Contents" / "MacOS").iterdir():    # zip keeps no execute bit
+                f.chmod(0o755)
+        else:
+            part.chmod(0o755)
+            os.replace(part, PROJECTOR_BIN)
         progress["ok"] = True
     except Exception as e:      # noqa: BLE001 -- shown in the page
         progress["error"] = str(e)
@@ -85,7 +96,8 @@ def download_projector(progress: dict):
 
 def projector_program() -> str | None:
     """The climbing-projector program, or None when it is not installed."""
-    for p in (os.environ.get(PROJECTOR_ENV), shutil.which("climbing-projector"), PROJECTOR_BIN):
+    for p in (os.environ.get(PROJECTOR_ENV), shutil.which("climbing-projector"), PROJECTOR_BIN,
+              PROJECTOR_APP / "Contents" / "MacOS" / "climbing-projector"):
         if p and pathlib.Path(p).is_file() and os.access(p, os.X_OK):
             return str(p)
     return None

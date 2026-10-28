@@ -1,4 +1,5 @@
-"""Build the MuJoCo scene: the wall with its holds, the floor, the ArUco markers, the cameras and the robot.
+"""Build the MuJoCo scene: the robot on its floor (Rhoban's microban_sim, climbing version), and around it the wall
+with its holds, the ArUco markers and the cameras.
 
 :class:`climbing_sim.ClimbingSim` does it for you; use :func:`build_spec` to add your own things to the scene
 before compiling it.  Geom groups (MuJoCo viewer, keys 0-5): 1 visual meshes, 3 collision shapes, 4 sockets.
@@ -11,7 +12,7 @@ import os
 import pathlib
 import tempfile
 
-import microban_model
+import microban_sim
 import mujoco
 import numpy as np
 
@@ -20,7 +21,6 @@ from .cameras import Camera, default_cameras
 from .wall import WALL_WIDTH, WALL_HEIGHT, WALL_THICKNESS, GRID_COLS, GRID_ROWS, Wall, hole_position, wall_to_world
 
 ASSETS = pathlib.Path(__file__).parent / "assets"
-ROBOT_XML = microban_model.mjcf(climb=True)      # the climbing robot: ball hands and climbing feet (microban_model)
 HOLD_VISUAL = ASSETS / "hold" / "hold_visual.stl"
 # hold collisions (the hold frame: origin at the socket centre): the socket and its lip as spheres, all inside the real
 # hold (30, cup_spheres.json), the back plate, gussets and rear block as 4 hole-free hulls, and a 1 mm skin of 10 convex
@@ -28,12 +28,8 @@ HOLD_VISUAL = ASSETS / "hold" / "hold_visual.stl"
 HOLD_PARTS = sorted(glob.glob(str(ASSETS / "hold" / "hull_*.stl"))) + sorted(glob.glob(str(ASSETS / "hold" / "skin_*.stl")))
 HOLD_SPHERES = json.loads((ASSETS / "hold" / "cup_spheres.json").read_text())
 
-#: joints driven by servos, in the order of the robot's actuators (the head is a servo too)
-JOINTS = ["head",
-          "right_shoulder_pitch", "right_shoulder_roll", "right_elbow",
-          "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle_pitch", "right_ankle_roll",
-          "left_shoulder_pitch", "left_shoulder_roll", "left_elbow",
-          "left_hip_yaw", "left_hip_roll", "left_hip_pitch", "left_knee", "left_ankle_pitch", "left_ankle_roll"]
+#: joints driven by servos, in the order of the robot's actuators (the head is a servo too): microban_model's
+JOINTS = microban_sim.JOINTS
 #: the four limbs, each ending in a ball that hooks into the holds' sockets
 LIMBS = ["left_hand", "right_hand", "left_foot", "right_foot"]
 #: limb -> name of the MuJoCo site at the centre of its ball
@@ -81,35 +77,18 @@ def build_spec(wall: Wall | None = None, cameras: list[Camera] | None = None, ro
     """
     wall = Wall.load("N2") if wall is None else wall
     cameras = default_cameras() if cameras is None else cameras
-    spec = mujoco.MjSpec.from_file(str(ROBOT_XML)) if robot else mujoco.MjSpec()
+    if robot:           # the climbing robot on its floor, its servos simulated by BAM (microban_sim)
+        spec = microban_sim.build_spec("climber", floor_friction=floor_friction)
+    else:
+        spec = mujoco.MjSpec()
+        spec.option.timestep = 0.002
+        spec.worldbody.add_geom(name="floor", type=mujoco.mjtGeom.mjGEOM_PLANE, size=[3.0, 3.0, 0.05],
+                                friction=[floor_friction, 0.005, 0.0001])
     spec.modelname = "climbing_sim"
-    spec.option.timestep = 0.002
-    spec.option.integrator = mujoco.mjtIntegrator.mjINT_IMPLICITFAST
-    spec.option.cone = mujoco.mjtCone.mjCONE_PYRAMIDAL
-    spec.option.ccd_iterations = 12
-    spec.visual.global_.offwidth, spec.visual.global_.offheight = 1920, 1920
-    spec.visual.quality.offsamples = 4
     spec.compiler.texturedir = ""
-
-    if robot:
-        # torque-controlled joints: the servos are simulated by BAM (sim.Servos), which also
-        # computes their friction and damping, so MuJoCo's own are zeroed
-        for act in spec.actuators:
-            act.set_to_motor()
-            act.gear = [1.0, 0, 0, 0, 0, 0]
-            act.forcelimited = False
-            act.ctrllimited = False
-        for j in spec.joints:
-            if j.type == mujoco.mjtJoint.mjJNT_HINGE:
-                j.damping = np.zeros((3, 1)) if np.ndim(j.damping) else 0.0
-                j.frictionloss = 0.0
-
     w = spec.worldbody
-    w.add_light(name="sun", pos=[0.4, -1.5, 2.5], dir=[0.0, 0.6, -1.0],
-                type=mujoco.mjtLightType.mjLIGHT_DIRECTIONAL, castshadow=True)
-    w.add_light(name="fill", pos=[0.4, -2.0, 1.0], dir=[0.0, 1.0, 0.0], diffuse=[0.4, 0.4, 0.4], castshadow=False)
 
-    # ---- the board and the floor ------------------------------------------------------------------
+    # ---- the board --------------------------------------------------------------------------------
     spec.add_texture(name="wood", type=mujoco.mjtTexture.mjTEXTURE_2D, builtin=mujoco.mjtBuiltin.mjBUILTIN_FLAT,
                            rgb1=[0.84, 0.72, 0.52], rgb2=[0.84, 0.72, 0.52], width=8, height=8)
     spec.add_material(name="wood", rgba=[0.86, 0.75, 0.56, 1]).textures[mujoco.mjtTextureRole.mjTEXROLE_RGB] = "wood"
@@ -124,12 +103,6 @@ def build_spec(wall: Wall | None = None, cameras: list[Camera] | None = None, ro
     w.add_geom(name="wall_front", type=mujoco.mjtGeom.mjGEOM_BOX, material="wall_front",
                size=[WALL_WIDTH / 2, WALL_HEIGHT / 2, 0.0002], pos=[WALL_WIDTH / 2, -0.0002, WALL_HEIGHT / 2],
                quat=[0.7071068, 0.7071068, 0, 0], contype=0, conaffinity=0, group=1)
-    spec.add_texture(name="grid", type=mujoco.mjtTexture.mjTEXTURE_2D, builtin=mujoco.mjtBuiltin.mjBUILTIN_CHECKER,
-                     rgb1=[0.55, 0.55, 0.55], rgb2=[0.5, 0.5, 0.5], width=512, height=512)
-    spec.add_material(name="floor", texrepeat=[8, 8], reflectance=0.05).textures[
-        mujoco.mjtTextureRole.mjTEXROLE_RGB] = "grid"
-    w.add_geom(name="floor", type=mujoco.mjtGeom.mjGEOM_PLANE, size=[2.5, 2.5, 0.05], material="floor",
-               pos=[WALL_WIDTH / 2, -1.5, 0], friction=[floor_friction, 0.005, 0.0001])
 
     # ---- holds --------------------------------------------------------------------------------------
     spec.add_mesh(name="hold_visual", file=str(HOLD_VISUAL))
