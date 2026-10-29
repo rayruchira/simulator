@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 build/
 *.png
+# !climbing_sim/assets/aruco/dict_4x4_50_id5.png
 !docs/*.png
 uv.lock
 

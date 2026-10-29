@@ -206,6 +206,24 @@ as an `MjSpec` to modify.
 
 ## Frames
 
+The robot's back carries a visual-only `DICT_4X4_50` marker, ID **5**. Its entire
+black code square is **42 x 42 mm**, without a larger sticker template. In trunk
+coordinates its nominal centre is `[-0.033, 0, 0.05475]` m; marker x/y/z point
+along trunk -y/+z/-x. A 50 micrometre outward visual offset avoids z-fighting on the
+existing flat rear face. The massless, non-colliding visual follows the trunk;
+the existing meshes, physics, starting poses, wall and cameras are unchanged.
+
+To validate its dimensions, transform, detection and unchanged dynamics (Linux,
+headless), from this directory:
+
+```bash
+uv run --with opencv-python env MUJOCO_GL=egl python -m unittest discover -s tests -v
+```
+
+The checks detect ID 5 in both default camera images, check the ordered image
+corners against the prescribed transform, compare the original model parameters,
+and require identical positions, velocities and actuator forces over 100 steps.
+
 ![World and wall frames](docs/frames.png)
 
 * **World frame** (MuJoCo, everything in `ClimbingSim`): origin at the bottom-left corner of the board's front
