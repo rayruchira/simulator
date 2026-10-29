@@ -142,8 +142,10 @@ In the world frame; none of these moves the simulation:
 
 ### Your moves: the same file on the robot
 
-Everything the robot does is a **move**: a class with `step(obs) -> targets` (and optionally `reset(obs)`, `kp_fw`,
-`options` and `sliders`), no base class needed. `examples/move.py` has the shape.
+Everything the robot does is a **move**: a class with `step(obs) -> targets` (19 angles, or `{joint: angle}`; `None`
+ends it), and optionally `start(obs)`, `stopping(obs)`, `kp`, `options` and `sliders`; no base class needed.
+`examples/move.py` has the shape, microban's [docs/moves.md](https://github.com/Rhoban/microban/blob/dev_v2/docs/moves.md)
+the whole guide.
 
 * **On the robot**: put the file in `microban/src/moves/` (microban, branch `dev_v2`). The robot's program finds it by
   itself: it appears in the dashboard, with Start / Stop and its options and sliders (edited live).
@@ -158,7 +160,7 @@ Everything the robot does is a **move**: a class with `step(obs) -> targets` (an
   ```
 
 Use only the observation in it, and JOINTS from `microban_model` (the same order as `climbing_sim.JOINTS`), which
-the robot has too. (`run_controller` is the old name of `run_move`.)
+the robot has too.
 
 ### Reinforcement learning
 
