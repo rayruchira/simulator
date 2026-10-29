@@ -30,4 +30,4 @@ climbing_sim = ["assets/**/*", "walls/*.json", "tools/web/*.html"]
 
 [tool.uv.sources]
 microban-model = { git = "https://github.com/Rhoban/microban_model", lfs = true }
-microban-sim = { path = "../microban_sim", editable = true }    # until published: then git = "https://github.com/Rhoban/microban_sim"
+microban-sim = { git = "https://github.com/Rhoban/microban_sim" }
