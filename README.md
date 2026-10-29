@@ -12,7 +12,7 @@ markers and the two cameras. Your job: make the robot climb, by motion planning,
 |---|---|---|
 | What | this package, in Python: `sim.step(target)` | the robot's own program on this wall: `make sim WALL=N2` in microban |
 | Speed | as fast as it computes (~2 ms per 20 ms step), no window (`sim.view()` to watch) | real time, 50 Hz, MuJoCo's window |
-| Your code | your planner, your RL, your `Controller` (`run_controller`) | your `Controller` (`CONTROLLER=...`) or your moves, exactly what `make deploy` sends |
+| Your code | your planner, your RL, your moves (`run_move`) | your moves (`src/moves/`), exactly what `make deploy` sends |
 | Around it | save / restore a state, many processes in parallel | keyboard, gamepad, live dashboard, torque off at start, the robot's safeties |
 
 The sensors are the robot's in both (with their delays): what works in one works in the other.
@@ -45,7 +45,7 @@ uv run python examples/view.py   # the robot hanging on the start holds of wall 
 
 **The robot's program on the simulated wall.** From `microban/`: `make sim WALL=N2` runs the robot's own program
 (your moves of `src/moves/`, the keyboard, the gamepad, the live dashboard) on this simulator, the robot hanging on
-the wall; `CONTROLLER=my_controller.py` adds your Controller ([below](#your-controller-on-the-real-robot)). It uses
+the wall ([your moves](#your-moves-the-same-file-on-the-robot)). It uses
 this folder as it is: what you change here applies at once (microban's `docs/simulation.md`).
 
 ## Quick start
@@ -56,7 +56,7 @@ from climbing_sim import ClimbingSim, JOINTS
 sim = ClimbingSim(wall="N2")         # a competition wall, two default cameras
 obs = sim.reset_hanging()            # the robot hanging on the wall's four start holds
 for t in range(500):                 # 500 x 20 ms = 10 s
-    target = obs["q"]                # your controller: 19 joint angles (rad), in the order of JOINTS
+    target = obs["q"]                # your move: 19 joint angles (rad), in the order of JOINTS
     obs = sim.step(target)           # one 20 ms control step
 print(sim.hooked())                  # which hold each ball is in
 image = sim.render("cam_left")       # (H, W, 3) uint8
@@ -103,7 +103,7 @@ on a laptop without images. The simulation does not run in real time; the real r
 
 ### The observation: what the real robot measures
 
-`step()` returns it, `sim.observation()` gives it at any time. A controller meant for the real robot may use only
+`step()` returns it, `sim.observation()` gives it at any time. A move meant for the real robot may use only
 this. The IMU values are in the trunk frame (see [Frames](#frames)). As on the robot, some arrive late: the joint
 velocities by one step (20 ms), the gyro and the accelerometer by 3, the orientation (`gravity`, `quat`) by 4
 (`ClimbingSim(ideal_sensors=True)`: none, for debugging).
@@ -140,16 +140,25 @@ In the world frame; none of these moves the simulation:
 * `state = sim.get_state()`, then some `step()`s, then `sim.set_state(state)`: **try a motion and come back**.
   The same steps from the same state give exactly the same motion.
 
-### Your controller on the real robot
+### Your moves: the same file on the robot
 
-Write it as a class with `step(obs) -> targets` (and optionally `reset(obs)`, `kp_fw`): `examples/controller.py` has
-the shape. `run_controller(controller, sim, seconds)` runs it here; the same file runs on the real robot from the
-microban repository (branch dev_v2): `make run HOST=radxa@microban-XXXX.local CONTROLLER=my_controller.py`, started
-and stopped with [c] (gamepad Y); `make sim WALL=N2 CONTROLLER=my_controller.py` runs it in the robot's program on
-this simulator. Use only the observation in it, and JOINTS from `microban_model` (the same order as
-`climbing_sim.JOINTS`), which the robot has too. A Controller or one of microban's moves? See microban's
-[docs/controller.md](https://github.com/Rhoban/microban/blob/dev_v2/docs/controller.md#controller-or-move): the
-climbing itself is best a Controller.
+Everything the robot does is a **move**: a class with `step(obs) -> targets` (and optionally `reset(obs)`, `kp_fw`,
+`options` and `sliders`), no base class needed. `examples/move.py` has the shape.
+
+* **On the robot**: put the file in `microban/src/moves/` (microban, branch `dev_v2`). The robot's program finds it by
+  itself: it appears in the dashboard, with Start / Stop and its options and sliders (edited live).
+  `make sim WALL=N2` runs it in the robot's program on this simulator, `make deploy` sends it to the robot.
+* **Here, in Python** (options and sliders at their defaults):
+
+  ```python
+  from climbing_sim import ClimbingSim, load_moves, run_move
+  sim = ClimbingSim("N2", kp_fw=125); sim.reset_hanging()
+  moves = load_moves("../microban/src/moves/my_move.py")   # {name: move}: MyMove -> "my"
+  run_move(moves["my"], sim, 30)                            # 30 s of simulated time
+  ```
+
+Use only the observation in it, and JOINTS from `microban_model` (the same order as `climbing_sim.JOINTS`), which
+the robot has too. (`run_controller` is the old name of `run_move`.)
 
 ### Reinforcement learning
 
@@ -294,8 +303,8 @@ to frame the whole 1.4 m wall vertically.
 * `examples/view.py [N1|N2|N3|wall.json]`: interactive viewer, the servos holding the start posture.
 * `examples/control_loop.py`: the step / observation loop, on one joint.
 * `examples/planning.py`: forward and inverse kinematics, and trying a motion from a saved state.
-* `examples/controller.py`: a Controller, the file that runs here (`run_controller`), in the robot's program
-  (`make sim WALL=N2 CONTROLLER=...` in microban) and on the robot.
+* `examples/move.py`: a move, the file that runs here (`run_move`), in the robot's program (`make sim WALL=N2` in
+  microban, the file in `src/moves/`) and on the robot.
 * `examples/rl_env.py`: a minimal Gymnasium environment, a starting point for RL (`uv pip install gymnasium`).
 * `examples/cameras.py [cameras.json]`: render the cameras to PNG files.
 
