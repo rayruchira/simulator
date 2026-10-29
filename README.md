@@ -144,10 +144,12 @@ In the world frame; none of these moves the simulation:
 
 Write it as a class with `step(obs) -> targets` (and optionally `reset(obs)`, `kp_fw`): `examples/controller.py` has
 the shape. `run_controller(controller, sim, seconds)` runs it here; the same file runs on the real robot from the
-microban repository (branch dev_v2): `make run HOST=<robot> CONTROLLER=my_controller.py`, started and stopped with
-[c] (gamepad Y); `make sim WALL=N2 CONTROLLER=my_controller.py` runs it in the robot's program on this simulator.
-Use only the observation in it, and JOINTS from `microban_model` (the same order as `climbing_sim.JOINTS`),
-which the robot has too.
+microban repository (branch dev_v2): `make run HOST=radxa@microban-XXXX.local CONTROLLER=my_controller.py`, started
+and stopped with [c] (gamepad Y); `make sim WALL=N2 CONTROLLER=my_controller.py` runs it in the robot's program on
+this simulator. Use only the observation in it, and JOINTS from `microban_model` (the same order as
+`climbing_sim.JOINTS`), which the robot has too. A Controller or one of microban's moves? See microban's
+[docs/controller.md](https://github.com/Rhoban/microban/blob/dev_v2/docs/controller.md#controller-or-move): the
+climbing itself is best a Controller.
 
 ### Reinforcement learning
 
@@ -292,6 +294,8 @@ to frame the whole 1.4 m wall vertically.
 * `examples/view.py [N1|N2|N3|wall.json]`: interactive viewer, the servos holding the start posture.
 * `examples/control_loop.py`: the step / observation loop, on one joint.
 * `examples/planning.py`: forward and inverse kinematics, and trying a motion from a saved state.
+* `examples/controller.py`: a Controller, the file that runs here (`run_controller`), in the robot's program
+  (`make sim WALL=N2 CONTROLLER=...` in microban) and on the robot.
 * `examples/rl_env.py`: a minimal Gymnasium environment, a starting point for RL (`uv pip install gymnasium`).
 * `examples/cameras.py [cameras.json]`: render the cameras to PNG files.
 
@@ -310,9 +314,6 @@ to frame the whole 1.4 m wall vertically.
   voltage, DC motor with back-EMF, current limit (1.75 A), load-dependent friction, a supply voltage that drops
   under load, a 10 ms command latency; the sensors' delays (above).
 
-The robot, its servos and its sensors come from Rhoban's robot simulator,
-[microban_sim](https://github.com/Rhoban/microban_sim) (`ClimbingSim` is its `MicrobanSim` in the climbing version, with
-the wall around it); this package adds the wall, the holds, the markers, the cameras and the tools.
 * **The wall**: the board, the hole grid and the holds, drawn with the real hold's mesh. A hold collides as 30
   spheres that make its socket and lip (all inside the real hold), 4 hulls (back plate, gussets, rear block) and a
   thin skin on the outside of the cup. A ball end seats 0.3-0.45 mm from the socket centre.
@@ -320,6 +321,10 @@ the wall around it); this package adds the wall, the holds, the markers, the cam
   border).
 * **The cameras**: Intel RealSense D435i colour streams, with the real cameras' intrinsics and extrinsics (see
   [Cameras](#cameras)). Images are rendered without lens distortion.
+
+The robot, its servos and its sensors come from Rhoban's robot simulator,
+[microban_sim](https://github.com/Rhoban/microban_sim) (`ClimbingSim` is its `MicrobanSim` in the climbing version, with
+the wall around it); this package adds the wall, the holds, the markers, the cameras and the tools.
 
 Physics runs at 500 Hz (2 ms steps). In the viewer, key 3 (Rendering > Geom groups) shows the collision shapes:
 robot convex parts (blue), servo boxes (yellow), ball ends (cyan), hold spheres (orange), hold hulls and skin
