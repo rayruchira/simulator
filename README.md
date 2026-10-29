@@ -26,6 +26,15 @@ The sensors are the robot's in both (with their delays): what works in one works
 Clone it next to the robot's code ([Rhoban/microban](https://github.com/Rhoban/microban), branch `dev_v2`): the
 simulator is yours to read and change, and the robot's program uses it from there.
 
+**What you need on your PC** (Linux; macOS: below; Windows: in [WSL](https://learn.microsoft.com/windows/wsl/install),
+Ubuntu, then all as on Linux): git with **git-lfs** (the robot model's meshes), `make`, and
+[uv](https://docs.astral.sh/uv/getting-started/installation/):
+
+```bash
+sudo apt install git git-lfs make && git lfs install      # macOS: brew install git-lfs && git lfs install
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 ```bash
 mkdir hackathon && cd hackathon
 git clone https://github.com/rock-climbing-robots/simulator
@@ -42,7 +51,8 @@ uv run python examples/view.py   # the robot hanging on the start holds of wall 
 ```
 
 `uv run <command>` runs anything in the project's environment (or `source .venv/bin/activate` once). Installed before
-2026-10-29? `uv sync --upgrade` brings microban_sim up to date (`run_move`, `load_moves`).
+2026-10-29? `uv sync --upgrade` brings microban_sim up to date (`run_move`, `load_moves`). On macOS, MuJoCo's viewer
+needs `mjpython` instead of `python` (`uv run mjpython examples/view.py`); everything without a window runs as is.
 
 **The robot's program on the simulated wall.** From `microban/`: `make sim WALL=N2` runs the robot's own program
 (your moves of `src/moves/`, their keys in the viewer, the live dashboard) on this simulator, the robot hanging on
@@ -155,8 +165,8 @@ the whole guide.
 
   ```python
   from climbing_sim import ClimbingSim, load_moves, run_move
-  sim = ClimbingSim("N2", kp_fw=125); sim.reset_hanging()
-  moves = load_moves("../microban/src/moves/my_move.py")   # {name: move}: MyMove -> "my"
+  sim = ClimbingSim("N2"); sim.reset_hanging()               # (run from simulator/: the paths below are from there)
+  moves = load_moves("../microban/src/moves/my_move.py")   # {name: move}: MyMove -> "my"; its kp while it runs
   run_move(moves["my"], sim, 30)                            # 30 s of simulated time
   ```
 
@@ -308,7 +318,7 @@ to frame the whole 1.4 m wall vertically.
 * `examples/planning.py`: forward and inverse kinematics, and trying a motion from a saved state.
 * `examples/move.py`: a move, the file that runs here (`run_move`), in the robot's program (`make sim WALL=N2` in
   microban, the file in `src/moves/`) and on the robot.
-* `examples/rl_env.py`: a minimal Gymnasium environment, a starting point for RL (`uv pip install gymnasium`).
+* `examples/rl_env.py`: a minimal Gymnasium environment, a starting point for RL (`uv run --with gymnasium python examples/rl_env.py`).
 * `examples/cameras.py [cameras.json]`: render the cameras to PNG files.
 
 ## What is simulated
