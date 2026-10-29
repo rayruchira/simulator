@@ -18,6 +18,7 @@ import mujoco
 import numpy as np
 
 from . import aruco
+from .robot_marker import add_robot_marker
 from .cameras import Camera, default_cameras
 from .wall import WALL_WIDTH, WALL_HEIGHT, WALL_THICKNESS, GRID_COLS, GRID_ROWS, Wall, hole_position, wall_to_world
 
@@ -138,6 +139,8 @@ def build_spec(wall: Wall | None = None, cameras: list[Camera] | None = None, ro
     for cam in cameras:
         cam.add_to_spec(spec)
     w.add_camera(name="overview", pos=[0.4, -2.2, 0.9], xyaxes=[1, 0, 0, 0, 0.2, 1])
+    if robot:
+        add_robot_marker(spec)
     return spec
 
 
