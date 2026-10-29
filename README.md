@@ -13,7 +13,7 @@ markers and the two cameras. Your job: make the robot climb, by motion planning,
 | What | this package, in Python: `sim.step(target)` | the robot's own program on this wall: `make sim WALL=N2` in microban |
 | Speed | as fast as it computes (~2 ms per 20 ms step), no window (`sim.view()` to watch) | real time, 50 Hz, MuJoCo's window |
 | Your code | your planner, your RL, your moves (`run_move`) | your moves (`src/moves/`), exactly what `make deploy` sends |
-| Around it | save / restore a state, many processes in parallel | keyboard, gamepad, live dashboard, torque off at start, the robot's safeties |
+| Around it | save / restore a state, many processes in parallel | keys in the viewer, live dashboard, torque off at start, the robot's safeties |
 
 The sensors are the robot's in both (with their delays): what works in one works in the other.
 
@@ -41,10 +41,11 @@ uv sync                          # .venv with Rhoban's robot simulator (microban
 uv run python examples/view.py   # the robot hanging on the start holds of wall N2, in MuJoCo's viewer
 ```
 
-`uv run <command>` runs anything in the project's environment (or `source .venv/bin/activate` once).
+`uv run <command>` runs anything in the project's environment (or `source .venv/bin/activate` once). Installed before
+2026-10-29? `uv sync --upgrade` brings microban_sim up to date (`run_move`, `load_moves`).
 
 **The robot's program on the simulated wall.** From `microban/`: `make sim WALL=N2` runs the robot's own program
-(your moves of `src/moves/`, the keyboard, the gamepad, the live dashboard) on this simulator, the robot hanging on
+(your moves of `src/moves/`, their keys in the viewer, the live dashboard) on this simulator, the robot hanging on
 the wall ([your moves](#your-moves-the-same-file-on-the-robot)). It uses
 this folder as it is: what you change here applies at once (microban's `docs/simulation.md`).
 
@@ -350,6 +351,7 @@ climbing_sim/
   wall.py       Hold, Wall, the grid and the frames
   routes.py     generate_wall(level, seed): the N1-N4 routes
   cameras.py    Camera (OpenCV conventions), D435i intrinsics, marker visibility
+  move.py       run_move, load_moves (microban_sim's): your moves, the same files as on the robot
   aruco.py      the corner markers
   walls/        the competition walls N1, N2, N3
   assets/       hold meshes / collision shapes, the start poses
