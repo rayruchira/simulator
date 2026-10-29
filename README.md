@@ -166,8 +166,8 @@ the whole guide.
   ```python
   from climbing_sim import ClimbingSim, load_moves, run_move
   sim = ClimbingSim("N2"); sim.reset_hanging()               # (run from simulator/: the paths below are from there)
-  moves = load_moves("../microban/src/moves/my_move.py")   # {name: move}: MyMove -> "my"; its kp while it runs
-  run_move(moves["my"], sim, 30)                            # 30 s of simulated time
+  moves = load_moves("../microban/src/moves/my_move.py")   # {name: move}: MyMove -> "my"
+  run_move(moves["my"], sim, 30)                            # 30 s of simulated time, its kp while it runs
   ```
 
 Use only the observation in it, and JOINTS from `microban_model` (the same order as `climbing_sim.JOINTS`), which
