@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Open the simulator in MuJoCo's viewer: the robot hanging on the start holds of a wall, its servos holding
 the start posture (drag the robot with Ctrl + right mouse to feel the servos).  Key 3 (or Rendering > Geom groups)
 shows the collision shapes: robot convex parts (blue), servo boxes (yellow), ball ends (cyan), hold spheres (orange),

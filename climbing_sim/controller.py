@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Run your own controller, the same file as on the real robot (microban: ``make run CONTROLLER=my_controller.py``):
 ``run_controller(controller, sim, seconds)``, from Rhoban's robot simulator (microban_sim).
 

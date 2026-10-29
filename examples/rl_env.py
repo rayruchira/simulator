@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """A minimal Gymnasium environment around ClimbingSim, a starting point for reinforcement learning.
 
     uv pip install gymnasium          # not a dependency of climbing_sim

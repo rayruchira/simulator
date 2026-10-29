@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Camera editor in the browser: enter each real camera's calibration (its intrinsics, and the extrinsics your
 code computes from the corner markers), check it on a photo from that camera, then save the JSON the simulator
 loads.

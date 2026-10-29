@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Makes the README's figures (docs/*.png).
 
     uv run --with matplotlib --with trimesh --with shapely --with networkx python docs/make_figures.py

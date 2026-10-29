@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The control loop of the API: bend the right knee while the robot hangs on its four start holds.
 
 Every step() holds the 19 joint targets (rad, order climbing_sim.JOINTS) for 20 ms while BAM simulates the

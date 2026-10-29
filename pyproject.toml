@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "climbing-sim"
 version = "0.1.0"
+license = "GPL-3.0-or-later"
 description = "MuJoCo simulator of the climbing robot on the hackathon wall (robot, wall, holds, ArUco markers, cameras)"
 readme = "README.md"
 requires-python = ">=3.12"

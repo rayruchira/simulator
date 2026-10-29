@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The hackathon wall (see the rulebook): an 800 x 1400 mm board standing on the floor, with a grid of
 52 x 93 M3 holes at a 15 mm pitch (17.5 mm side margins, 10 mm top and bottom margins).
 

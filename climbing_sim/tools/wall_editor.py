@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Wall editor in the browser: place holds by hand or generate a route of level N1-N4 from a seed, then save the
 JSON the simulator loads.
 

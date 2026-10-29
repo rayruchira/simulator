@@ -341,3 +341,8 @@ climbing_sim/
 docs/           the README's figures (make_figures.py makes them)
 examples/       the examples above
 ```
+
+## License
+
+GPL-3.0-or-later (LICENSE), as the software of [microban](https://github.com/Rhoban/microban) and
+[microban_sim](https://github.com/Rhoban/microban_sim).

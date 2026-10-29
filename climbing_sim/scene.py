@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Build the MuJoCo scene: the robot on its floor (Rhoban's microban_sim, climbing version), and around it the wall
 with its holds, the ArUco markers and the cameras.
 

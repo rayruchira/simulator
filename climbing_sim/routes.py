@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Routes of the hackathon levels N1-N3 (and an extra N4), from a seed.
 
     from climbing_sim.routes import generate_wall

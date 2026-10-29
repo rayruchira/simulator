@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Make or check a wall (a set of holds) for the simulator.
 
     python -m climbing_sim.tools.wall_tool new my_wall.json 10,5 14,5 ...   # holds by their LEFT hole (col,row)

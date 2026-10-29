@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The robot hanging on the start holds of a wall, in MuJoCo's interactive viewer.
 
     python -m climbing_sim.tools.viewer [N1|N2|N3|my_wall.json]

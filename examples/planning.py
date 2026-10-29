@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The planning tools, on one example: forward and inverse kinematics, and trying a motion from a saved state.
 
 The robot hangs on its four start holds.  We ask for a posture (the trunk 2 cm higher, the four balls where they

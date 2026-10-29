@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """What the two browser tools (wall editor, camera editor) share: a small local JSON web server.
 
 Each tool serves one HTML page (``tools/web/*.html``) and a few JSON routes, on 127.0.0.1 only, with Python's

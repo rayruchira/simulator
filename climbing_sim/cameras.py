@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """External cameras with the real cameras' calibration (OpenCV conventions).
 
 A camera is given by

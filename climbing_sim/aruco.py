@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The rulebook's ArUco markers (dictionary DICT_4X4_50): IDs 1-4 at the wall corners.
 
 A wall marker is a 100 x 100 mm black code (6 x 6 cells: a black border cell + 4 x 4 data bits) on a

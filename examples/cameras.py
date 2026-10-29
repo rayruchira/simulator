@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Render the two external cameras (set with climbing-sim-cameras) and the overview to PNG files.
 
     python examples/cameras.py [cameras.json]

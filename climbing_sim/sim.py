@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The hackathon's simulator: the climbing robot on the competition wall, with its holds, markers and cameras.
 
     from climbing_sim import ClimbingSim

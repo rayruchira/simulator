@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """A controller that runs both here and on the real robot: the shape to give yours.
 
     python examples/controller.py                         # in the simulator (hanging on the wall, 10 s)
