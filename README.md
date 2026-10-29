@@ -77,6 +77,9 @@ image = sim.render("cam_left")       # (H, W, 3) uint8
 
 ![The 19 servos and their index](docs/joints.png)
 
+Its CAD: the [Onshape document](https://cad.onshape.com/documents/a4bcc28f64d49d0ed7bca71b/w/caf376f744ab0aab1547c516/e/42a4642d1b4dccabe8f99c03)
+(the model here and in microban_model is exported from it).
+
 The robot has **19 joints**, each driven by a Dynamixel XL330 servo. The figure shows each servo, numbered with
 its index in `climbing_sim.JOINTS`, from the four sides (the rest of the robot is see-through, so the servos
 inside the trunk show). Everything that takes or returns joint angles uses this order: `JOINTS.index("right_knee")`
