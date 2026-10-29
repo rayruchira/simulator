@@ -219,7 +219,7 @@ intermediate holds between them, the robot's start stance at the bottom:
 | N1 | the regular ladder, rungs every 75 mm (the same for every seed) |
 | N2 | a ladder with missing holds: rungs every 105 mm, about 30 % of the holds removed at random |
 | N3 | the robot has to move right and left: the N2 ladder following a random walk (at most 30 mm per rung, 150 mm from the middle), about 25 % of the holds removed |
-| N4 | extra challenge (not in the rulebook): the route forks at 600 mm into two branches drifting apart; one leads to the top, the other stops one rung lower and has an impassable gap in its upper half |
+| N4 | extra challenge (not in the rulebook for now): the route forks at 600 mm into two branches drifting apart, as high as each other; one leads to the top, the other has a step too long for the hands in its upper half, hidden among the random holes |
 
 Holes are never made around the start or the finish, and never leave a limb a step longer than 105 mm. We
 checked them with our motion planner: the robot can climb N2, N3 and N4 to the top for 16 seeds out of 16 each,

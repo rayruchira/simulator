@@ -14,8 +14,9 @@ the bottom (feet on the bottom rung 50 mm above the wall's bottom edge, hands ab
     N2   a ladder with missing holds: rungs every 105 mm + intermediate holds, ~30 % of the holds removed
     N3   the robot has to move right and left: the N2 ladder following a random walk (<= 30 mm per rung, <= 150 mm
          from the middle of the wall), ~25 % of the holds removed
-    N4   (extra) the route forks at 600 mm into two branches drifting apart, built the same way: one leads to the
-         top, the other one stops one rung lower and lacks one rung and the holds next to it in its upper half
+    N4   (extra, not in the rulebook) the route forks at 600 mm into two branches drifting apart, built the same
+         way and as high as each other: one leads to the top, the other one lacks the hand holds of one rung and
+         those next to it in its upper half (a step too long for the hands), hidden among the random holes
 
 Holes are never made around the start (start holds, the first hold above each, the first intermediate row) or the
 finish, and never leave a limb a step longer than 105 mm. A hold is only added if its body does not overlap
@@ -305,9 +306,10 @@ def _level4(seed, rng) -> Wall:
 
 def _build4(rng) -> _Builder:
     """A trunk up to FORK_ROW (600 mm), then two branches drifting apart, right and left, built the same way (rungs,
-    intermediate holds, holds missing at random).  The dead one stops one rung below the top (the top of the wall
-    -- its highest holds -- is only on the good branch) and, somewhere in its upper half, lacks the holds of one
-    rung and the intermediate holds next to it: a 210 mm step, among the random holes it looks like any other."""
+    intermediate holds, holds missing at random) and as high as each other.  The dead one has a trap in its upper
+    half: on one rung, the two HAND holds and the hand holds between it and its neighbours are missing, so the hands
+    face a 210 mm step (beyond their reach, MAX_GAP_ROWS) while the feet holds stay -- among the random holes it
+    looks like any other, and only trying it (or measuring every gap) tells the branches apart."""
     b = _Builder(3, rng)
     pitch = LEVELS[3][1]
     rows = _rung_rows(pitch)
@@ -337,12 +339,12 @@ def _build4(rng) -> _Builder:
         for k in range(len(allr) - 1):
             b.mid((allr[k] + allr[k + 1]) // 2, int(round((alls[k] + alls[k + 1]) / 2)), br)
     b.remove_some(MISSING_SHARE[4], keep_top_of=("good", "dead"))
-    top_good = max(h.row for h in b.holds if b.tag[h][0] == "good")
-    b.holds = [h for h in b.holds if b.tag[h][0] != "dead" or h.row <= top_good - pitch]
-    # the trap: no hold on one rung of the dead branch's upper half, nor on the intermediate rows next to it
-    dead_rungs = [r for r in after if r <= top_good - pitch]
-    kill = int(rng.choice(dead_rungs[len(dead_rungs) // 2:-1] or dead_rungs[-1:]))
-    b.holds = [h for h in b.holds if not (b.tag[h][0] == "dead" and abs(h.row - kill) <= pitch // 2 + 1)]
+    # the trap: no HAND hold (lanes 2-3) on one rung of the dead branch's upper half, nor on the intermediate rows
+    # next to it; the feet holds stay, so the branch looks like the other one
+    dead_rungs = after[len(after) // 2:-2] or after[-2:-1]
+    kill = int(rng.choice(dead_rungs))
+    b.holds = [h for h in b.holds
+               if not (b.tag[h] in (("dead", 2), ("dead", 3)) and abs(h.row - kill) <= pitch // 2 + 1)]
     return b
 
 
@@ -354,8 +356,8 @@ def generate_wall(level: int = 2, seed: int = 0) -> Wall:
     * level 1, any seed: the regular ladder (rungs every 75 mm);
     * level 2: the level-2 ladder (rungs every 105 mm and intermediate holds) with holds missing at random;
     * level 3: the same, wandering right and left (up to 150 mm from the middle, 30 mm per rung at most);
-    * level 4: the route forks above 600 mm into two branches drifting apart; one of them leads to the top, the
-      other one has an impassable gap and stops lower.
+    * level 4: the route forks above 600 mm into two branches drifting apart, as high as each other; one of them
+      leads to the top, the other one has a step too long for the hands, hidden among the random holes.
     Holes are never put around the start and the finish, and never leave a step longer than 105 mm for a limb.
     """
     if level not in (1, 2, 3, 4):
